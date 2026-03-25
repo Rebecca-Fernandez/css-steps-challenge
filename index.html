@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CSS Steps Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #01152C; font-family: Arial, sans-serif; color: #fff; }
+    .app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
+
+    /* Header */
+    .header { background: #01152C; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+    .logo-row { padding: 14px 20px; display: flex; align-items: center; gap: 14px; }
+    .logo-svg { width: 48px; height: 48px; flex-shrink: 0; }
+    .wordmark-main { font-family: Montserrat, sans-serif; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 0.04em; display: block; }
+    .wordmark-sub { font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 400; color: #fff; letter-spacing: 0.14em; display: block; margin-top: 2px; }
+    .cyan-rule { height: 3px; background: #18ABE3; }
+    .sub-bar { background: #071220; padding: 9px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .sub-title { font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 600; color: #18ABE3; letter-spacing: 0.15em; text-transform: uppercase; }
+    .sub-date { font-size: 11px; color: #6B7280; }
+
+    /* Join screen */
+    .join-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; }
+    .join-box { width: 100%; max-width: 340px; background: #0A1F3A; border: 1px solid #2A4D72; border-top: 3px solid #18ABE3; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+    .join-prompt { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #6B7280; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px; }
+    .join-input { width: 100%; background: #01152C; border: 1px solid #2A4D72; border-bottom: 2px solid #18ABE3; color: #fff; font-family: Montserrat, sans-serif; font-size: 20px; font-weight: 600; padding: 10px 14px; outline: none; margin-bottom: 12px; }
+    .join-btn { width: 100%; background: #18ABE3; border: none; color: #fff; font-family: Montserrat, sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.08em; padding: 14px; cursor: pointer; border-radius: 4px; }
+    .join-tagline { font-size: 11px; color: #6B7280; margin-top: 16px; text-align: center; }
+
+    /* Body */
+    .body { padding: 16px 20px 40px; display: none; }
+    .body.visible { display: block; }
+
+    /* Trash talk */
+    .trash-talk { background: #0A1F3A; border: 1px solid #1a3a5c; border-left: 3px solid #18ABE3; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #7ab8d4; font-style: italic; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+    /* Streak */
+    .streak { display: flex; align-items: center; gap: 8px; background: rgba(24,171,227,0.1); border: 1px solid rgba(24,171,227,0.2); border-left: 3px solid #18ABE3; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #18ABE3; }
+
+    /* Champion */
+    .champion-banner { background: linear-gradient(135deg, #1a1500, #2a2000); border: 1px solid #FFD70044; border-left: 3px solid #FFD700; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .champion-emoji { font-size: 32px; }
+    .champion-title { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #FFD700; letter-spacing: 0.15em; text-transform: uppercase; }
+    .champion-name { font-family: Montserrat, sans-serif; font-size: 16px; font-weight: 800; color: #fff; }
+    .champion-sub { font-size: 11px; color: #6B7280; }
+
+    /* Stats */
+    .stats-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .stat-box { flex: 1; background: #0A1F3A; border: 1px solid #152840; padding: 10px 12px; text-align: center; }
+    .stat-val { font-family: Montserrat, sans-serif; font-size: 18px; font-weight: 800; color: #18ABE3; }
+    .stat-lbl { font-size: 9px; color: #6B7280; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+
+    /* Panels */
+    .panel { background: #0A1F3A; border: 1px solid #152840; padding: 16px; margin-bottom: 12px; }
+    .panel-cyan { border-top: 2px solid #18ABE3; }
+    .panel-grey { border-top: 2px solid #6B7280; }
+    .panel-label { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #6B7280; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 10px; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .step-input { flex: 1; background: #01152C; border: 1px solid #152840; border-bottom: 2px solid #18ABE3; color: #fff; font-family: Montserrat, sans-serif; font-size: 26px; font-weight: 700; padding: 8px 14px; outline: none; -webkit-appearance: none; }
+    .log-btn { background: #18ABE3; border: none; color: #fff; font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 700; padding: 0 20px; cursor: pointer; border-radius: 4px; }
+    .saved-msg { font-size: 11px; color: #18ABE3; height: 14px; }
+
+    /* Personal goal */
+    .goal-row-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .goal-lbl-txt { font-size: 10px; color: #6B7280; letter-spacing: 0.1em; text-transform: uppercase; }
+    .goal-input-small { width: 90px; background: #01152C; border: 1px solid #152840; color: #fff; font-family: Montserrat, sans-serif; font-size: 13px; padding: 4px 8px; outline: none; border-radius: 3px; text-align: center; }
+    .personal-goal-row { display: flex; align-items: center; gap: 8px; }
+    .personal-goal-track { flex: 1; height: 6px; background: #01152C; border: 1px solid #152840; overflow: hidden; border-radius: 3px; }
+    .personal-goal-fill { height: 100%; background: #18ABE3; border-radius: 3px; transition: width 0.5s; }
+    .personal-goal-pct { font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 700; color: #18ABE3; min-width: 36px; text-align: right; }
+
+    /* Team goal */
+    .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .goal-edit { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #18ABE3; background: none; border: 1px solid rgba(24,171,227,0.3); padding: 3px 10px; cursor: pointer; border-radius: 4px; }
+    .goal-track { height: 8px; background: #01152C; border: 1px solid #152840; overflow: hidden; margin-bottom: 8px; border-radius: 2px; }
+    .goal-fill { height: 100%; background: #18ABE3; transition: width 0.5s; }
+    .goal-meta { display: flex; justify-content: space-between; font-size: 11px; color: #6B7280; }
+    .goal-input-row { display: flex; gap: 8px; margin-top: 10px; }
+    .team-goal-input { flex: 1; background: #01152C; border: 1px solid #152840; color: #fff; font-family: Montserrat, sans-serif; font-size: 14px; padding: 8px 12px; outline: none; }
+    .goal-save { background: #18ABE3; border: none; color: #fff; padding: 0 14px; cursor: pointer; font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 700; border-radius: 4px; }
+
+    /* Not logged */
+    .not-logged { background: #0A1F3A; border: 1px solid #152840; border-top: 2px solid #ff6b6b44; padding: 14px 16px; margin-bottom: 12px; }
+    .not-logged-title { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #ff6b6b; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+    .not-logged-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .not-logged-chip { background: #01152C; border: 1px solid #ff6b6b33; color: #ff6b6b; font-size: 12px; padding: 4px 10px; border-radius: 4px; }
+
+    /* View toggle */
+    .view-toggle { display: flex; margin-bottom: 12px; border: 1px solid #152840; border-radius: 4px; overflow: hidden; }
+    .view-btn { flex: 1; padding: 8px; font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: none; color: #6B7280; cursor: pointer; }
+    .view-btn.active { background: #18ABE3; color: #fff; }
+
+    /* Board */
+    .board-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .board-title { font-family: Montserrat, sans-serif; font-size: 15px; font-weight: 800; color: #fff; letter-spacing: 0.08em; }
+    .refresh-btn { font-size: 11px; color: #6B7280; background: none; border: 1px solid #152840; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+    .board-row { background: #0A1F3A; border: 1px solid #152840; border-left: 3px solid #152840; margin-bottom: 8px; padding: 14px 16px; position: relative; }
+    .board-row.me { background: #0D1E33; border-color: rgba(24,171,227,0.3); border-left-color: #18ABE3; }
+    .board-row.r0 { border-left-color: #FFD700; background: #0D1E2A; }
+    .board-row.r1 { border-left-color: #C0C0C0; }
+    .board-row.r2 { border-left-color: #CD7F32; }
+    .board-row.slow1 { border-left-color: #5a2020; background: #0e1515; }
+    .board-row.slow2 { border-left-color: #5a3a10; background: #0e1410; }
+    .board-row.slow3 { border-left-color: #2a3a10; background: #0e120e; }
+    .improved-badge { position: absolute; top: 10px; right: 14px; font-size: 10px; color: #00d4aa; background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); padding: 2px 7px; border-radius: 10px; }
+    .row-top { display: flex; align-items: center; gap: 12px; }
+    .rank { font-family: Montserrat, sans-serif; font-size: 20px; font-weight: 800; color: #6B7280; width: 32px; flex-shrink: 0; text-align: center; }
+    .rank.gold { color: #FFD700; } .rank.silver { color: #C0C0C0; } .rank.bronze { color: #CD7F32; }
+    .row-name { font-family: Montserrat, sans-serif; font-size: 15px; font-weight: 700; color: #fff; }
+    .row-name.me { color: #18ABE3; }
+    .top-label { font-size: 10px; margin-top: 2px; font-weight: 600; }
+    .top-label.gold { color: #FFD700; } .top-label.silver { color: #C0C0C0; } .top-label.bronze { color: #CD7F32; }
+    .animal-label { font-size: 10px; margin-top: 2px; font-style: italic; }
+    .animal-label.snail { color: #ff6b6b; } .animal-label.turtle { color: #f0a500; } .animal-label.sloth { color: #a0c878; }
+    .row-streak-lbl { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .row-steps { font-family: Montserrat, sans-serif; font-size: 24px; font-weight: 800; color: #fff; line-height: 1; text-align: right; }
+    .row-steps.me { color: #18ABE3; }
+    .steps-lbl { font-size: 9px; color: #6B7280; letter-spacing: 0.1em; text-align: right; text-transform: uppercase; }
+    .bar-wrap { height: 2px; background: #152840; margin: 9px 0 7px 44px; }
+    .bar-fill { height: 2px; background: #18ABE3; }
+    .reacts { display: flex; flex-wrap: wrap; gap: 5px; margin-left: 44px; align-items: center; margin-top: 4px; }
+    .react-chip { background: #01152C; border: 1px solid #152840; padding: 3px 9px; font-size: 12px; cursor: pointer; color: #6B7280; border-radius: 4px; }
+    .react-add { background: none; border: 1px dashed #152840; padding: 3px 9px; font-size: 10px; cursor: pointer; color: #6B7280; border-radius: 4px; }
+    .picker { display: none; gap: 8px; margin: 7px 0 0 44px; flex-wrap: wrap; }
+    .picker.open { display: flex; }
+    .footer { font-size: 10px; color: rgba(107,114,128,0.4); text-align: center; margin-top: 20px; }
+
+    /* Milestone */
+    .milestone { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #0D1E33; border: 2px solid #FFD700; padding: 16px 24px; border-radius: 8px; text-align: center; z-index: 999; box-shadow: 0 8px 32px rgba(0,0,0,0.6); max-width: 280px; width: 90%; }
+    .milestone.show { display: block; animation: popIn 0.3s ease; }
+    @keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity:0; } to { transform: translateX(-50%) scale(1); opacity:1; } }
+    .m-emoji { font-size: 40px; display: block; margin-bottom: 8px; }
+    .m-title { font-family: Montserrat, sans-serif; font-size: 14px; font-weight: 800; color: #FFD700; }
+    .m-sub { font-size: 12px; color: #6B7280; margin-top: 4px; }
+
+    .switch-user { font-size: 10px; color: #6B7280; margin-bottom: 16px; }
+    .switch-user span { color: #18ABE3; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="milestone" id="milestone">
+  <span class="m-emoji" id="mEmoji">🎉</span>
+  <div class="m-title" id="mTitle"></div>
+  <div class="m-sub" id="mSub"></div>
+</div>
+
+<div class="app">
+  <!-- Header always visible -->
+  <div class="header">
+    <div class="logo-row">
+      <svg class="logo-svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="50" fill="#18ABE3"/>
+        <path d="M8,63 L50,20 L92,63 L92,100 L8,100 Z" fill="white"/>
+        <polygon points="50,43 74,66 67,66 50,52 33,66 26,66" fill="#6B7280"/>
+      </svg>
+      <div>
+        <span class="wordmark-main">COASTAL</span>
+        <span class="wordmark-sub">STEEL STRUCTURES</span>
+      </div>
+    </div>
+    <div class="cyan-rule"></div>
+    <div class="sub-bar">
+      <div class="sub-title">Who's Walking?</div>
+      <div class="sub-date" id="datelbl"></div>
+    </div>
+  </div>
+
+  <!-- Join screen -->
+  <div class="join-screen" id="joinScreen">
+    <div class="join-box">
+      <div class="join-prompt">Enter your name to join the board</div>
+      <input class="join-input" id="joinInput" type="text" placeholder="Your name" autocomplete="off"/>
+      <button class="join-btn" onclick="joinBoard()">JOIN THE BOARD →</button>
+      <div class="join-tagline">Let's get healthy together!</div>
+    </div>
+  </div>
+
+  <!-- Main app body -->
+  <div class="body" id="appBody">
+    <div class="switch-user">Logged in as <strong id="displayName"></strong> · <span onclick="switchUser()">not you?</span></div>
+
+    <div class="trash-talk" id="trashTalk" onclick="nextTrash()"><span id="ttText"></span><span style="color:#6B7280;font-size:11px">tap ↻</span></div>
+
+    <div class="streak" id="streakBar" style="display:none"></div>
+
+    <div class="champion-banner" id="championBanner" style="display:none">
+      <div class="champion-emoji">👑</div>
+      <div>
+        <div class="champion-title">Champion of the Week</div>
+        <div class="champion-name" id="champName"></div>
+        <div class="champion-sub" id="champSub"></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-val" id="statAvg">0</div><div class="stat-lbl">Team Avg</div></div>
+      <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Total Today</div></div>
+      <div class="stat-box"><div class="stat-val" id="statImproved">—</div><div class="stat-lbl">Most Improved</div></div>
+    </div>
+
+    <div class="panel panel-cyan">
+      <div class="panel-label">Log Today's Steps</div>
+      <div class="input-row">
+        <input type="number" placeholder="00000" class="step-input" id="stepInput"/>
+        <button class="log-btn" onclick="logSteps()">LOG</button>
+      </div>
+      <div class="saved-msg" id="savedMsg"></div>
+      <div class="goal-row-label">
+        <div class="goal-lbl-txt">My Daily Goal</div>
+        <input type="number" class="goal-input-small" id="personalGoalInput" value="10000" onchange="updatePersonalGoal()"/>
+      </div>
+      <div class="personal-goal-row">
+        <div class="personal-goal-track"><div class="personal-goal-fill" id="personalGoalFill" style="width:0%"></div></div>
+        <div class="personal-goal-pct" id="personalGoalPct">0%</div>
+      </div>
+    </div>
+
+    <div class="panel panel-grey">
+      <div class="goal-header">
+        <div class="panel-label" style="margin-bottom:0">Team Goal</div>
+        <button class="goal-edit" onclick="toggleGoalEdit()">EDIT</button>
+      </div>
+      <div id="goalDisplay">
+        <div class="goal-track"><div class="goal-fill" id="teamGoalFill" style="width:0%"></div></div>
+        <div class="goal-meta"><span id="teamTotalSteps">0 combined steps</span><span id="teamGoalPct">0% of 0</span></div>
+      </div>
+      <div class="goal-input-row" id="goalEditRow" style="display:none">
+        <input type="number" placeholder="e.g. 100000" class="team-goal-input" id="teamGoalInput"/>
+        <button class="goal-save" onclick="saveTeamGoal()">SAVE</button>
+      </div>
+    </div>
+
+    <div class="not-logged" id="notLoggedSection" style="display:none">
+      <div class="not-logged-title">👀 Haven't logged today</div>
+      <div class="not-logged-list" id="notLoggedList"></div>
+    </div>
+
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setView('today',this)">Today</button>
+      <button class="view-btn" onclick="setView('week',this)">This Week</button>
+    </div>
+
+    <div class="board-hdr">
+      <div class="board-title">LEADERBOARD</div>
+      <button class="refresh-btn" onclick="loadBoard()">↻ Refresh</button>
+    </div>
+    <div id="board"></div>
+
+    <div class="footer">Let's get healthy together!</div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDEm7ZIeAbmyKdFIjALd96oqDy3EebMF2k",
+    authDomain: "css-steps-challenge.firebaseapp.com",
+    databaseURL: "https://css-steps-challenge-default-rtdb.firebaseio.com",
+    projectId: "css-steps-challenge",
+    storageBucket: "css-steps-challenge.firebasestorage.app",
+    messagingSenderId: "322863674124",
+    appId: "1:322863674124:web:59708e766041762e770f29"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const EMOJI = ['🔥','💪','👟','👏','😤','🐢'];
+  const topB = ['👑 Leader','🥈 Runner-up','🥉 Third'];
+  const topL = ['gold','silver','bronze'];
+  const rankC = ['gold','silver','bronze'];
+  const sA = ['🐌','🐢','🦥'];
+  const sT = ['Snail Pace…','Turtle Mode','Sloth Life'];
+  const sC = ['snail','turtle','sloth'];
+  const sR = ['slow1','slow2','slow3'];
+
+  let myName = localStorage.getItem('css-steps-name') || '';
+  let myStreak = 0;
+  let currentView = 'today';
+  let teamGoal = 0;
+  let personalGoal = parseInt(localStorage.getItem('css-personal-goal') || '10000');
+  let trashIdx = 0;
+
+  function today() { return new Date().toISOString().split('T')[0]; }
+  function fmt(n) { return Number(n||0).toLocaleString(); }
+  function weekKey() {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day===0?-6:1);
+    const mon = new Date(d.setDate(diff));
+    return mon.toISOString().split('T')[0];
+  }
+
+  // Date
+  document.getElementById('datelbl').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+
+  // Trash talk (dynamic)
+  const staticTrash = [
+    "Someone needs to put down the snacks and pick up their feet. 🐌",
+    "The office elevator is not a step counter hack. 🦥",
+    "Walking to the fridge counts. Barely. 🐢",
+    "Remember: steps logged = bragging rights. 💪",
+    "Your dog walks more than you. Just saying. 👟",
+    "The bottom 3 have been notified. They don't care. 😤",
+    "One small step for man, one giant leap past your coworkers. 🔥",
+    "PRO TIP: parking further away counts as steps. 👑",
+  ];
+
+  function buildTrashTalk(players) {
+    const msgs = [...staticTrash];
+    if (players.length > 0) {
+      const leader = players[0].name;
+      const last = players[players.length-1].name;
+      msgs.push(`${leader} is out here making everyone else look bad. 👑`);
+      msgs.push(`At ${last}'s pace, they'll hit 10,000 steps by next week. 🐢`);
+      msgs.push(`${leader} called. They want to know if the rest of you are okay. 👟`);
+    }
+    return msgs;
+  }
+
+  let trashMsgs = [...staticTrash];
+
+  function setTrash(msgs) {
+    trashMsgs = msgs;
+    trashIdx = Math.floor(Math.random() * msgs.length);
+    document.getElementById('ttText').textContent = trashMsgs[trashIdx];
+  }
+
+  window.nextTrash = function() {
+    trashIdx = (trashIdx+1) % trashMsgs.length;
+    document.getElementById('ttText').textContent = trashMsgs[trashIdx];
+  };
+
+  setTrash(staticTrash);
+
+  // Streak
+  async function updateStreak(name) {
+    const sk = `streaks/${name.replace(/\s/g,'_')}`;
+    const snap = await get(ref(db, sk));
+    let data = snap.exists() ? snap.val() : { lastDate: null, streak: 0 };
+    const yd = new Date(); yd.setDate(yd.getDate()-1);
+    const ydStr = yd.toISOString().split('T')[0];
+    const td = today();
+    if (data.lastDate === td) { return data.streak; }
+    else if (data.lastDate === ydStr) { data.streak++; data.lastDate = td; }
+    else { data.streak = 1; data.lastDate = td; }
+    await set(ref(db, sk), data);
+    return data.streak;
+  }
+
+  // Join
+  window.joinBoard = async function() {
+    const name = document.getElementById('joinInput').value.trim();
+    if (!name) return;
+    myName = name;
+    localStorage.setItem('css-steps-name', name);
+    showApp();
+  };
+
+  window.switchUser = function() {
+    localStorage.removeItem('css-steps-name');
+    myName = '';
+    document.getElementById('joinScreen').style.display = 'flex';
+    document.getElementById('appBody').classList.remove('visible');
+  };
+
+  async function showApp() {
+    document.getElementById('joinScreen').style.display = 'none';
+    document.getElementById('appBody').classList.add('visible');
+    document.getElementById('displayName').textContent = myName;
+
+    // Personal goal
+    document.getElementById('personalGoalInput').value = personalGoal;
+
+    // Load streak
+    const sk = `streaks/${myName.replace(/\s/g,'_')}`;
+    const snap = await get(ref(db, sk));
+    if (snap.exists()) {
+      myStreak = snap.val().streak || 0;
+      if (myStreak > 1) {
+        const sb = document.getElementById('streakBar');
+        sb.style.display = 'flex';
+        sb.textContent = `🔥 ${myStreak}-day streak — keep it going, ${myName}!`;
+      }
+    }
+
+    // Load team goal
+    const tgSnap = await get(ref(db, 'teamGoal'));
+    if (tgSnap.exists()) teamGoal = tgSnap.val();
+
+    // Load my steps today for personal goal bar
+    const mySnap = await get(ref(db, `steps/${today()}/${myName.replace(/\s/g,'_')}`));
+    if (mySnap.exists()) updatePersonalGoalBar(mySnap.val());
+
+    loadBoard();
+    loadWeekChampion();
+
+    // Real-time updates
+    onValue(ref(db, `steps/${today()}`), () => loadBoard());
+  }
+
+  window.logSteps = async function() {
+    const steps = parseInt(document.getElementById('stepInput').value);
+    if (!steps || steps < 1) return;
+    const key = myName.replace(/\s/g,'_');
+    await set(ref(db, `steps/${today()}/${key}`), steps);
+    myStreak = await updateStreak(myName);
+
+    // Update streak display
+    if (myStreak > 1) {
+      const sb = document.getElementById('streakBar');
+      sb.style.display = 'flex';
+      sb.textContent = `🔥 ${myStreak}-day streak — keep it going, ${myName}!`;
+    }
+
+    updatePersonalGoalBar(steps);
+    if (steps >= personalGoal) showMilestone('🎉', `${fmt(steps)} Steps!`, `${myName} crushed their daily goal!`);
+
+    document.getElementById('stepInput').value = '';
+    const sm = document.getElementById('savedMsg');
+    sm.textContent = `✓ Logged for ${myName}`;
+    setTimeout(() => sm.textContent = '', 2500);
+    loadBoard();
+  };
+
+  function updatePersonalGoalBar(steps) {
+    const goal = parseInt(document.getElementById('personalGoalInput').value) || personalGoal;
+    const pct = Math.min(100, Math.round((steps/goal)*100));
+    document.getElementById('personalGoalFill').style.width = pct+'%';
+    document.getElementById('personalGoalPct').textContent = pct+'%';
+  }
+
+  window.updatePersonalGoal = function() {
+    personalGoal = parseInt(document.getElementById('personalGoalInput').value) || 10000;
+    localStorage.setItem('css-personal-goal', personalGoal);
+  };
+
+  window.toggleGoalEdit = function() {
+    const row = document.getElementById('goalEditRow');
+    row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+  };
+
+  window.saveTeamGoal = async function() {
+    const g = parseInt(document.getElementById('teamGoalInput').value);
+    if (!g) return;
+    await set(ref(db, 'teamGoal'), g);
+    teamGoal = g;
+    document.getElementById('goalEditRow').style.display = 'none';
+    loadBoard();
+  };
+
+  async function loadWeekChampion() {
+    const snap = await get(ref(db, `weekSteps/${weekKey()}`));
+    if (!snap.exists()) return;
+    const data = snap.val();
+    const sorted = Object.entries(data).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
+    if (sorted.length === 0) return;
+    const champ = sorted[0];
+    document.getElementById('champName').textContent = champ.name;
+    document.getElementById('champSub').textContent = `${fmt(champ.steps)} steps this week`;
+    document.getElementById('championBanner').style.display = 'flex';
+  }
+
+  window.loadBoard = async function() {
+    const snap = await get(ref(db, `steps/${today()}`));
+    let players = [];
+    if (snap.exists()) {
+      const data = snap.val();
+      players = Object.entries(data).map(([k,v])=>({name:k.replace(/_/g,' '),steps:parseInt(v)||0})).sort((a,b)=>b.steps-a.steps);
+    }
+
+    // Also log to weekly
+    if (myName) {
+      const myKey = myName.replace(/\s/g,'_');
+      const mySnap = await get(ref(db, `steps/${today()}/${myKey}`));
+      if (mySnap.exists()) {
+        await set(ref(db, `weekSteps/${weekKey()}/${myKey}`), mySnap.val());
+      }
+    }
+
+    // Trash talk with real names
+    setTrash(buildTrashTalk(players));
+
+    // Stats
+    const total = players.reduce((s,p)=>s+p.steps,0);
+    const avg = players.length ? Math.round(total/players.length) : 0;
+    document.getElementById('statAvg').textContent = fmt(avg);
+    document.getElementById('statTotal').textContent = fmt(total);
+
+    // Most improved (placeholder — would need yesterday's data)
+    document.getElementById('statImproved').textContent = players.length > 0 ? players[0].name+'⚡' : '—';
+
+    // Team goal
+    if (teamGoal > 0) {
+      const pct = Math.min(100, Math.round((total/teamGoal)*100));
+      document.getElementById('teamGoalFill').style.width = pct+'%';
+      document.getElementById('teamTotalSteps').textContent = `${fmt(total)} combined steps`;
+      document.getElementById('teamGoalPct').textContent = `${pct}% of ${fmt(teamGoal)}`;
+    }
+
+    // Not logged
+    const allSnap = await get(ref(db, 'members'));
+    if (allSnap.exists()) {
+      const allMembers = Object.keys(allSnap.val()).map(k=>k.replace(/_/g,' '));
+      const loggedNames = players.map(p=>p.name);
+      const notLogged = allMembers.filter(m=>!loggedNames.includes(m));
+      if (notLogged.length > 0) {
+        document.getElementById('notLoggedSection').style.display = 'block';
+        document.getElementById('notLoggedList').innerHTML = notLogged.map(n=>`<div class="not-logged-chip">${n} 👟</div>`).join('');
+      } else {
+        document.getElementById('notLoggedSection').style.display = 'none';
+      }
+    }
+
+    // Register member
+    if (myName) {
+      await set(ref(db, `members/${myName.replace(/\s/g,'_')}`), true);
+    }
+
+    renderBoard(players);
+  };
+
+  function renderBoard(players) {
+    const total = players.length;
+    const top = players[0]?.steps || 0;
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+
+    if (players.length === 0) {
+      board.innerHTML = '<div style="text-align:center;padding:40px 0;color:#6B7280;font-size:12px;letter-spacing:0.1em">NO STEPS LOGGED YET TODAY<br>BE FIRST ON THE BOARD</div>';
+      return;
+    }
+
+    players.forEach((p, i) => {
+      const pct = Math.round((p.steps/top)*100);
+      const fb = total-1-i;
+      const isMe = p.name.toLowerCase() === myName.toLowerCase();
+
+      let rc = 'board-row';
+      if (isMe) rc += ' me';
+      else if (i===0) rc += ' r0';
+      else if (i===1) rc += ' r1';
+      else if (i===2) rc += ' r2';
+      if (fb<3 && !isMe) rc += ' '+sR[fb];
+
+      const div = document.createElement('div');
+      div.className = rc;
+      div.innerHTML = `
+        <div class="row-top">
+          <div class="rank ${i<3?rankC[i]:''}">${String(i+1).padStart(2,'0')}</div>
+          <div style="flex:1">
+            <div class="row-name ${isMe?'me':''}">${p.name}${fb<3&&!isMe?' '+sA[fb]:''}</div>
+            ${i<3?`<div class="top-label ${topL[i]}">${topB[i]}</div>`:''}
+            ${fb<3&&!isMe?`<div class="animal-label ${sC[fb]}">${sT[fb]}</div>`:''}
+          </div>
+          <div>
+            <div class="row-steps ${isMe?'me':''}">${fmt(p.steps)}</div>
+            <div class="steps-lbl">steps</div>
+          </div>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="reacts" id="reacts-${i}"></div>`;
+      board.appendChild(div);
+      loadReacts(p.name, i);
+    });
+  }
+
+  async function loadReacts(name, idx) {
+    const key = name.replace(/\s/g,'_');
+    const snap = await get(ref(db, `reacts/${today()}/${key}`));
+    const data = snap.exists() ? snap.val() : {};
+    const zone = document.getElementById(`reacts-${idx}`);
+    if (!zone) return;
+    const isMe = name.toLowerCase() === myName.toLowerCase();
+    const chips = Object.entries(data).filter(([,c])=>c>0).map(([e,c])=>
+      `<button class="react-chip" onclick="addReact('${name}',${idx},'${e}')">${e} ${c}</button>`).join('');
+    const addBtn = isMe ? '' :
+      `<button class="react-add" onclick="togglePicker(${idx})">+ react</button>
+       <div class="picker" id="picker-${idx}">${EMOJI.map(e=>`<span style="font-size:20px;cursor:pointer;margin-right:4px" onclick="addReact('${name}',${idx},'${e}')">${e}</span>`).join('')}</div>`;
+    zone.innerHTML = chips + addBtn;
+  }
+
+  window.togglePicker = function(idx) {
+    const p = document.getElementById(`picker-${idx}`);
+    if (p) p.classList.toggle('open');
+  };
+
+  window.addReact = async function(name, idx, emoji) {
+    const key = name.replace(/\s/g,'_');
+    const path = `reacts/${today()}/${key}/${emoji}`;
+    const snap = await get(ref(db, path));
+    const cur = snap.exists() ? snap.val() : 0;
+    await set(ref(db, path), cur+1);
+    const p = document.getElementById(`picker-${idx}`);
+    if (p) p.classList.remove('open');
+    loadReacts(name, idx);
+  };
+
+  window.setView = function(v, btn) {
+    currentView = v;
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if (v === 'week') loadWeekBoard();
+    else loadBoard();
+  };
+
+  async function loadWeekBoard() {
+    const snap = await get(ref(db, `weekSteps/${weekKey()}`));
+    let players = [];
+    if (snap.exists()) {
+      players = Object.entries(snap.val()).map(([k,v])=>({name:k.replace(/_/g,' '),steps:parseInt(v)||0})).sort((a,b)=>b.steps-a.steps);
+    }
+    renderBoard(players);
+  }
+
+  function showMilestone(e, t, s) {
+    document.getElementById('mEmoji').textContent = e;
+    document.getElementById('mTitle').textContent = t;
+    document.getElementById('mSub').textContent = s;
+    const m = document.getElementById('milestone');
+    m.classList.add('show');
+    setTimeout(()=>m.classList.remove('show'), 3500);
+  }
+
+  // Init
+  if (myName) {
+    document.getElementById('joinScreen').style.display = 'none';
+    showApp();
+  }
+
+  // Enter key on join
+  document.getElementById('joinInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinBoard();
+  });
+
+  // Enter key on steps
+  document.getElementById('stepInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') logSteps();
+  });
+</script>
+</body>
+</html>
