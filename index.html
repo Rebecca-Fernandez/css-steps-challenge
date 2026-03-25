@@ -13,6 +13,7 @@
 
     /* Header */
     .header { background: #01152C; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+    .header.hidden { display: none; }
     .logo-row { padding: 14px 20px; display: flex; align-items: center; gap: 14px; }
     .logo-svg { width: 48px; height: 48px; flex-shrink: 0; }
     .wordmark-main { font-family: Montserrat, sans-serif; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 0.04em; display: block; }
@@ -23,12 +24,29 @@
     .sub-date { font-size: 11px; color: #6B7280; }
 
     /* Join screen */
-    .join-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; }
-    .join-box { width: 100%; max-width: 340px; background: #0A1F3A; border: 1px solid #2A4D72; border-top: 3px solid #18ABE3; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
-    .join-prompt { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #6B7280; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px; }
-    .join-input { width: 100%; background: #01152C; border: 1px solid #2A4D72; border-bottom: 2px solid #18ABE3; color: #fff; font-family: Montserrat, sans-serif; font-size: 20px; font-weight: 600; padding: 10px 14px; outline: none; margin-bottom: 12px; }
-    .join-btn { width: 100%; background: #18ABE3; border: none; color: #fff; font-family: Montserrat, sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.08em; padding: 14px; cursor: pointer; border-radius: 4px; }
-    .join-tagline { font-size: 11px; color: #6B7280; margin-top: 16px; text-align: center; }
+    .join-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; background: radial-gradient(ellipse at top, #0a2a4a 0%, #01152C 70%); }
+    .join-hero { text-align: center; margin-bottom: 36px; }
+    .join-big-logo { margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .join-big-svg { width: 72px; height: 72px; filter: drop-shadow(0 4px 16px rgba(24,171,227,0.4)); }
+    .join-wordmark { text-align: left; }
+    .join-wordmark-main { font-family: Montserrat, sans-serif; font-size: 36px; font-weight: 800; color: #fff; letter-spacing: 0.04em; display: block; line-height: 1; }
+    .join-wordmark-sub { font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 400; color: #18ABE3; letter-spacing: 0.18em; display: block; margin-top: 4px; }
+    .join-challenge-title { font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 700; color: #18ABE3; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 10px; }
+    .join-tagline-big { font-family: Montserrat, sans-serif; font-size: 28px; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 8px; }
+    .join-tagline-big span { color: #18ABE3; }
+    .join-sub { font-size: 13px; color: #6B7280; margin-bottom: 0; }
+    .join-divider { width: 48px; height: 3px; background: #18ABE3; margin: 20px auto; }
+    .join-box { width: 100%; max-width: 360px; background: #0A1F3A; border: 1px solid #2A4D72; border-top: 3px solid #18ABE3; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+    .join-prompt { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; color: #6B7280; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 14px; }
+    .join-input { width: 100%; background: #01152C; border: 1px solid #2A4D72; border-bottom: 2px solid #18ABE3; color: #fff; font-family: Montserrat, sans-serif; font-size: 22px; font-weight: 600; padding: 12px 14px; outline: none; margin-bottom: 14px; }
+    .join-input::placeholder { color: #2A4D72; }
+    .join-btn { width: 100%; background: #18ABE3; border: none; color: #fff; font-family: Montserrat, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.1em; padding: 16px; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
+    .join-btn:hover { background: #149fd4; }
+    .join-footer { font-size: 11px; color: #6B7280; margin-top: 14px; text-align: center; }
+    .join-stats { display: flex; gap: 24px; justify-content: center; margin-top: 28px; }
+    .join-stat { text-align: center; }
+    .join-stat-val { font-family: Montserrat, sans-serif; font-size: 22px; font-weight: 800; color: #18ABE3; }
+    .join-stat-lbl { font-size: 10px; color: #6B7280; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
 
     /* Body */
     .body { padding: 16px 20px 40px; display: none; }
@@ -149,8 +167,8 @@
 </div>
 
 <div class="app">
-  <!-- Header always visible -->
-  <div class="header">
+  <!-- Header hidden until logged in -->
+  <div class="header hidden" id="mainHeader">
     <div class="logo-row">
       <svg class="logo-svg" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="50" fill="#18ABE3"/>
@@ -171,11 +189,35 @@
 
   <!-- Join screen -->
   <div class="join-screen" id="joinScreen">
+    <div class="join-hero">
+      <div class="join-big-logo">
+        <svg class="join-big-svg" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="50" fill="#18ABE3"/>
+          <path d="M8,63 L50,20 L92,63 L92,100 L8,100 Z" fill="white"/>
+          <polygon points="50,43 74,66 67,66 50,52 33,66 26,66" fill="#6B7280"/>
+        </svg>
+        <div class="join-wordmark">
+          <span class="join-wordmark-main">COASTAL</span>
+          <span class="join-wordmark-sub">STEEL STRUCTURES</span>
+        </div>
+      </div>
+      <div class="join-challenge-title">🏆 Steps Challenge</div>
+      <div class="join-tagline-big">Every step counts.<br><span>Let's get moving!</span></div>
+      <div class="join-sub">Daily steps · Streaks · Bragging rights</div>
+      <div class="join-divider"></div>
+    </div>
+
     <div class="join-box">
       <div class="join-prompt">Enter your name to join the board</div>
       <input class="join-input" id="joinInput" type="text" placeholder="Your name" autocomplete="off"/>
       <button class="join-btn" onclick="joinBoard()">JOIN THE BOARD →</button>
-      <div class="join-tagline">Let's get healthy together!</div>
+      <div class="join-footer">Let's get healthy together! 💪</div>
+    </div>
+
+    <div class="join-stats">
+      <div class="join-stat"><div class="join-stat-val">🔥</div><div class="join-stat-lbl">Streaks</div></div>
+      <div class="join-stat"><div class="join-stat-val">👑</div><div class="join-stat-lbl">Champion</div></div>
+      <div class="join-stat"><div class="join-stat-val">🐌</div><div class="join-stat-lbl">Shame</div></div>
     </div>
   </div>
 
@@ -368,12 +410,14 @@
   window.switchUser = function() {
     localStorage.removeItem('css-steps-name');
     myName = '';
+    document.getElementById('mainHeader').classList.add('hidden');
     document.getElementById('joinScreen').style.display = 'flex';
     document.getElementById('appBody').classList.remove('visible');
   };
 
   async function showApp() {
     document.getElementById('joinScreen').style.display = 'none';
+    document.getElementById('mainHeader').classList.remove('hidden');
     document.getElementById('appBody').classList.add('visible');
     document.getElementById('displayName').textContent = myName;
 
@@ -634,6 +678,8 @@
   if (myName) {
     document.getElementById('joinScreen').style.display = 'none';
     showApp();
+  } else {
+    document.getElementById('mainHeader').classList.add('hidden');
   }
 
   // Enter key on join
