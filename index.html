@@ -243,6 +243,18 @@
         <div class="personal-goal-track"><div class="personal-goal-fill" id="personalGoalFill" style="width:0%"></div></div>
         <div class="personal-goal-pct" id="personalGoalPct">0%</div>
       </div>
+      <div style="margin-top:12px;border-top:1px solid #152840;padding-top:12px;">
+        <button onclick="togglePastDay()" style="background:none;border:none;color:#18ABE3;font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;padding:0;">+ Log a previous day</button>
+        <div id="pastDayRow" style="display:none;margin-top:10px;">
+          <div style="font-family:Montserrat,sans-serif;font-size:10px;color:#6B7280;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Select day & enter steps</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="pastDaySelect" style="flex:1;background:#01152C;border:1px solid #152840;border-bottom:2px solid #18ABE3;color:#fff;font-family:Montserrat,sans-serif;font-size:13px;padding:8px 10px;outline:none;"></select>
+            <input type="number" placeholder="steps" id="pastStepInput" style="width:90px;background:#01152C;border:1px solid #152840;border-bottom:2px solid #18ABE3;color:#fff;font-family:Montserrat,sans-serif;font-size:16px;font-weight:700;padding:8px 10px;outline:none;-webkit-appearance:none;"/>
+            <button onclick="logPastSteps()" style="background:#18ABE3;border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;padding:10px 14px;cursor:pointer;border-radius:4px;">SAVE</button>
+          </div>
+          <div class="saved-msg" id="pastSavedMsg" style="margin-top:6px;"></div>
+        </div>
+      </div>
     </div>
 
     <div class="panel panel-grey">
@@ -338,7 +350,23 @@
     "The bottom 3 have been notified. They don't care. 😤",
     "One small step for man, one giant leap past your coworkers. 🔥",
     "PRO TIP: parking further away counts as steps. 👑",
+    "Somebody skipped leg day. Again. 🦵",
+    "The parking lot is free cardio. Just saying. 🚗",
   ];
+
+  const generalRoasts = [
+    (n) => `${n} typed 'steps' into Google just to see what it meant. 🤔`,
+    (n) => `${n}'s Fitbit filed for divorce. 💔`,
+    (n) => `${n} is saving their energy for the weekend. Spoiler: they won't use it. 🛋️`,
+    (n) => `${n} is currently 'between walks'. 😴`,
+  ];
+
+  function getPersonalRoast(name) {
+    const n = name.toLowerCase();
+    if (n === 'horse walker') return `Horse Walker claims he walks for days like horses. The jury is still out. 🐴`;
+    if (n === 'jake') return `Looks like Jake is out golfing again. ⛳`;
+    return generalRoasts[Math.floor(Math.random() * generalRoasts.length)](name);
+  }
 
   function buildTrashTalk(players) {
     const msgs = [...staticTrash];
@@ -348,6 +376,11 @@
       msgs.push(`${leader} is out here making everyone else look bad. 👑`);
       msgs.push(`At ${last}'s pace, they'll hit 10,000 steps by next week. 🐢`);
       msgs.push(`${leader} called. They want to know if the rest of you are okay. 👟`);
+      // Add personal roasts for bottom 3
+      const total = players.length;
+      for (let i = Math.max(0, total-3); i < total; i++) {
+        msgs.push(getPersonalRoast(players[i].name));
+      }
     }
     return msgs;
   }
@@ -471,6 +504,40 @@
     localStorage.setItem('css-personal-goal', personalGoal);
   };
 
+  window.togglePastDay = function() {
+    const row = document.getElementById('pastDayRow');
+    const isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      // Populate last 7 days
+      const sel = document.getElementById('pastDaySelect');
+      sel.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const val = d.toISOString().split('T')[0];
+        const label = d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = label;
+        sel.appendChild(opt);
+      }
+    }
+  };
+
+  window.logPastSteps = async function() {
+    const steps = parseInt(document.getElementById('pastStepInput').value);
+    const date = document.getElementById('pastDaySelect').value;
+    if (!steps || steps < 1 || !date) return;
+    const key = myName.replace(/\s/g,'_');
+    await set(ref(db, `steps/${date}/${key}`), steps);
+    await set(ref(db, `weekSteps/${weekKey()}/${key}`), steps);
+    const sm = document.getElementById('pastSavedMsg');
+    sm.textContent = `✓ Saved ${fmt(steps)} steps for ${new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}`;
+    setTimeout(() => { sm.textContent = ''; }, 3000);
+    document.getElementById('pastStepInput').value = '';
+  };
+
   window.toggleGoalEdit = function() {
     const row = document.getElementById('goalEditRow');
     row.style.display = row.style.display === 'none' ? 'flex' : 'none';
@@ -581,6 +648,7 @@
 
       const div = document.createElement('div');
       div.className = rc;
+      const personalRoast = (fb<3 && !isMe) ? getPersonalRoast(p.name) : '';
       div.innerHTML = `
         <div class="row-top">
           <div class="rank ${i<3?rankC[i]:''}">${String(i+1).padStart(2,'0')}</div>
@@ -588,6 +656,7 @@
             <div class="row-name ${isMe?'me':''}">${p.name}${fb<3&&!isMe?' '+sA[fb]:''}</div>
             ${i<3?`<div class="top-label ${topL[i]}">${topB[i]}</div>`:''}
             ${fb<3&&!isMe?`<div class="animal-label ${sC[fb]}">${sT[fb]}</div>`:''}
+            ${personalRoast?`<div style="font-size:10px;color:#6B7280;font-style:italic;margin-top:3px;">${personalRoast}</div>`:''}
           </div>
           <div>
             <div class="row-steps ${isMe?'me':''}">${fmt(p.steps)}</div>
