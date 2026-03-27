@@ -274,6 +274,7 @@
 
     <div class="not-logged" id="notLoggedSection" style="display:none">
       <div class="not-logged-title">👀 Haven't logged today</div>
+      <div id="notLoggedRoast" style="font-size:12px;color:#7ab8d4;font-style:italic;margin-bottom:10px;"></div>
       <div class="not-logged-list" id="notLoggedList"></div>
     </div>
 
@@ -553,15 +554,34 @@
   };
 
   async function loadWeekChampion() {
-    const snap = await get(ref(db, `weekSteps/${weekKey()}`));
-    if (!snap.exists()) return;
-    const data = snap.val();
-    const sorted = Object.entries(data).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
+    const weekTotals = await calcWeekTotals();
+    const sorted = Object.entries(weekTotals).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
     if (sorted.length === 0) return;
     const champ = sorted[0];
     document.getElementById('champName').textContent = champ.name;
     document.getElementById('champSub').textContent = `${fmt(champ.steps)} steps this week`;
     document.getElementById('championBanner').style.display = 'flex';
+  }
+
+  async function calcWeekTotals() {
+    // Get all 7 days of this week and sum steps per person
+    const totals = {};
+    const monday = new Date();
+    const day = monday.getDay();
+    const diff = monday.getDate() - day + (day===0?-6:1);
+    monday.setDate(diff);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const snap = await get(ref(db, `steps/${dateStr}`));
+      if (snap.exists()) {
+        Object.entries(snap.val()).forEach(([k,v]) => {
+          totals[k] = (totals[k] || 0) + (parseInt(v) || 0);
+        });
+      }
+    }
+    return totals;
   }
 
   window.loadBoard = async function() {
@@ -610,6 +630,21 @@
       if (notLogged.length > 0) {
         document.getElementById('notLoggedSection').style.display = 'block';
         document.getElementById('notLoggedList').innerHTML = notLogged.map(n=>`<div class="not-logged-chip">${n} 👟</div>`).join('');
+        // Build name list e.g. "Horse Walker, Jake Lang and JoAnn"
+        let nameList = '';
+        if (notLogged.length === 1) {
+          nameList = notLogged[0];
+        } else {
+          nameList = notLogged.slice(0,-1).join(', ') + ' and ' + notLogged[notLogged.length-1];
+        }
+        const roasts = [
+          `${nameList} are probably stuck in a meeting. Sure, Jan. 😏`,
+          `${nameList} are 'on their way' to log steps. Since Tuesday. 🐢`,
+          `${nameList}? Hello? Anyone home? 👀`,
+          `Still waiting on ${nameList}... 🦗`,
+        ];
+        const roast = roasts[Math.floor(Math.random() * roasts.length)];
+        document.getElementById('notLoggedRoast').textContent = roast;
       } else {
         document.getElementById('notLoggedSection').style.display = 'none';
       }
@@ -623,7 +658,7 @@
     renderBoard(players);
   };
 
-  function renderBoard(players) {
+  function renderBoard(players, isWeekly) {
     const total = players.length;
     const top = players[0]?.steps || 0;
     const board = document.getElementById('board');
@@ -644,23 +679,23 @@
       else if (i===0) rc += ' r0';
       else if (i===1) rc += ' r1';
       else if (i===2) rc += ' r2';
-      if (fb<3 && !isMe) rc += ' '+sR[fb];
+      if (fb<3 && !isMe && !isWeekly) rc += ' '+sR[fb];
 
       const div = document.createElement('div');
       div.className = rc;
-      const personalRoast = (fb<3 && !isMe) ? getPersonalRoast(p.name) : '';
+      const personalRoast = (fb<3 && !isMe && !isWeekly) ? getPersonalRoast(p.name) : '';
       div.innerHTML = `
         <div class="row-top">
           <div class="rank ${i<3?rankC[i]:''}">${String(i+1).padStart(2,'0')}</div>
           <div style="flex:1">
-            <div class="row-name ${isMe?'me':''}">${p.name}${fb<3&&!isMe?' '+sA[fb]:''}</div>
+            <div class="row-name ${isMe?'me':''}">${p.name}${fb<3&&!isMe&&!isWeekly?' '+sA[fb]:''}</div>
             ${i<3?`<div class="top-label ${topL[i]}">${topB[i]}</div>`:''}
-            ${fb<3&&!isMe?`<div class="animal-label ${sC[fb]}">${sT[fb]}</div>`:''}
+            ${fb<3&&!isMe&&!isWeekly?`<div class="animal-label ${sC[fb]}">${sT[fb]}</div>`:''}
             ${personalRoast?`<div style="font-size:10px;color:#6B7280;font-style:italic;margin-top:3px;">${personalRoast}</div>`:''}
           </div>
           <div>
             <div class="row-steps ${isMe?'me':''}">${fmt(p.steps)}</div>
-            <div class="steps-lbl">steps</div>
+            <div class="steps-lbl">${isWeekly?'this week':'steps'}</div>
           </div>
         </div>
         <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -710,12 +745,11 @@
   };
 
   async function loadWeekBoard() {
-    const snap = await get(ref(db, `weekSteps/${weekKey()}`));
-    let players = [];
-    if (snap.exists()) {
-      players = Object.entries(snap.val()).map(([k,v])=>({name:k.replace(/_/g,' '),steps:parseInt(v)||0})).sort((a,b)=>b.steps-a.steps);
-    }
-    renderBoard(players);
+    const weekTotals = await calcWeekTotals();
+    const players = Object.entries(weekTotals)
+      .map(([k,v])=>({name:k.replace(/_/g,' '),steps:v}))
+      .sort((a,b)=>b.steps-a.steps);
+    renderBoard(players, true);
   }
 
   function showMilestone(e, t, s) {
