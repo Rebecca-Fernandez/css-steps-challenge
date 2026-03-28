@@ -52,11 +52,8 @@
     .body { padding: 16px 20px 40px; display: none; }
     .body.visible { display: block; }
 
-    /* Trash talk */
-    .trash-talk { background: #0A1F3A; border: 1px solid #1a3a5c; border-left: 3px solid #18ABE3; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #7ab8d4; font-style: italic; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-
-    /* Streak */
-    .streak { display: flex; align-items: center; gap: 8px; background: rgba(24,171,227,0.1); border: 1px solid rgba(24,171,227,0.2); border-left: 3px solid #18ABE3; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #18ABE3; }
+    /* Smart banner */
+    .smart-banner { background: #0A1F3A; border: 1px solid #1a3a5c; border-left: 3px solid #18ABE3; padding: 11px 14px; margin-bottom: 14px; font-size: 12px; color: #7ab8d4; font-style: italic; }
 
     /* Champion */
     .champion-banner { background: linear-gradient(135deg, #1a1500, #2a2000); border: 1px solid #FFD70044; border-left: 3px solid #FFD700; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
@@ -207,9 +204,7 @@
   <div class="body" id="appBody">
     <div class="switch-user">Logged in as <strong id="displayName"></strong> · <span onclick="switchUser()">not you?</span></div>
 
-    <div class="trash-talk" id="trashTalk" onclick="nextTrash()"><span id="ttText"></span><span style="color:#6B7280;font-size:11px">tap ↻</span></div>
-
-    <div class="streak" id="streakBar" style="display:none"></div>
+    <div class="smart-banner" id="smartBanner"></div>
 
     <div class="champion-banner" id="championBanner" style="display:none">
       <div class="champion-emoji">👑</div>
@@ -319,7 +314,6 @@
   let currentView = 'today';
   let teamGoal = 0;
   let personalGoal = parseInt(localStorage.getItem('css-personal-goal') || '10000');
-  let trashIdx = 0;
 
   function today() { return new Date().toISOString().split('T')[0]; }
   function fmt(n) { return Number(n||0).toLocaleString(); }
@@ -335,26 +329,48 @@
   document.getElementById('datelbl').textContent =
     new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 
-  // Trash talk (dynamic)
-  const staticTrash = [
-    "Someone needs to put down the snacks and pick up their feet. 🐌",
-    "The office elevator is not a step counter hack. 🦥",
-    "Walking to the fridge counts. Barely. 🐢",
-    "Remember: steps logged = bragging rights. 💪",
-    "Your dog walks more than you. Just saying. 👟",
-    "The bottom 3 have been notified. They don't care. 😤",
-    "One small step for man, one giant leap past your coworkers. 🔥",
-    "PRO TIP: parking further away counts as steps. 👑",
-    "Somebody skipped leg day. Again. 🦵",
-    "The parking lot is free cardio. Just saying. 🚗",
-  ];
+  // Smart banner — personalized rank-based message
+  function updateSmartBanner(players, isWeekly) {
+    if (!myName) return;
+    const myIdx = players.findIndex(p => p.name.toLowerCase() === myName.toLowerCase());
+    const rank = myIdx + 1;
+    const total = players.length;
+    const hasLogged = myIdx >= 0 && players[myIdx].steps > 0;
+    const leader = players[0]?.name || '';
+    const streakSuffix = myStreak >= 7 ? ` ...and that's a ${myStreak}-day streak. Actual legend. 🔥` : '';
 
-  const generalRoasts = [
-    (n) => `${n} typed 'steps' into Google just to see what it meant. 🤔`,
-    (n) => `${n}'s Fitbit filed for divorce. 💔`,
-    (n) => `${n} is saving their energy for the weekend. Spoiler: they won't use it. 🛋️`,
-    (n) => `${n} is currently 'between walks'. 😴`,
-  ];
+    let msg = '';
+
+    if (!isWeekly) {
+      if (!hasLogged) {
+        msg = `${myName} hasn't logged yet. The board is watching. Silently judging. 👀`;
+      } else if (rank === 1) {
+        msg = `${myName} is running the board today. Everyone else is just cardio. 👑`;
+      } else if (rank === 2) {
+        msg = `${myName} is in 2nd today. One person is ahead. Unacceptable. 😤`;
+      } else if (rank === 3) {
+        msg = `Third place, ${myName}? Your sneakers are embarrassed. 👟`;
+      } else if (rank > total / 2) {
+        msg = `${myName} is in the bottom half today. The sloth is concerned. 🦥`;
+      } else {
+        msg = `${myName} is mid-pack today. Respectable. Barely. 🐢`;
+      }
+    } else {
+      if (rank === 1) {
+        msg = `${myName} owns the week so far. Don't get cozy. 🔥`;
+      } else if (rank === 2) {
+        msg = `${myName} is 2nd this week. ${leader} is up there. You gonna let that slide? 😤`;
+      } else if (rank === 3) {
+        msg = `${myName}, 3rd place this week. The podium smells bad from down here. 👟`;
+      } else if (rank > total / 2) {
+        msg = `${myName}, the weekly board called. It wants to know where you are. 🐢`;
+      } else {
+        msg = `${myName} is mid-pack this week. The top is right there. Almost. 💪`;
+      }
+    }
+
+    document.getElementById('smartBanner').textContent = msg + streakSuffix;
+  }
 
   function getPersonalRoast(name) {
     const n = name.toLowerCase();
@@ -363,37 +379,7 @@
     return generalRoasts[Math.floor(Math.random() * generalRoasts.length)](name);
   }
 
-  function buildTrashTalk(players) {
-    const msgs = [...staticTrash];
-    if (players.length > 0) {
-      const leader = players[0].name;
-      const last = players[players.length-1].name;
-      msgs.push(`${leader} is out here making everyone else look bad. 👑`);
-      msgs.push(`At ${last}'s pace, they'll hit 10,000 steps by next week. 🐢`);
-      msgs.push(`${leader} called. They want to know if the rest of you are okay. 👟`);
-      // Add personal roasts for bottom 3
-      const total = players.length;
-      for (let i = Math.max(0, total-3); i < total; i++) {
-        msgs.push(getPersonalRoast(players[i].name));
-      }
-    }
-    return msgs;
-  }
 
-  let trashMsgs = [...staticTrash];
-
-  function setTrash(msgs) {
-    trashMsgs = msgs;
-    trashIdx = Math.floor(Math.random() * msgs.length);
-    document.getElementById('ttText').textContent = trashMsgs[trashIdx];
-  }
-
-  window.nextTrash = function() {
-    trashIdx = (trashIdx+1) % trashMsgs.length;
-    document.getElementById('ttText').textContent = trashMsgs[trashIdx];
-  };
-
-  setTrash(staticTrash);
 
   // Streak
   async function updateStreak(name) {
@@ -441,11 +427,6 @@
     const snap = await get(ref(db, sk));
     if (snap.exists()) {
       myStreak = snap.val().streak || 0;
-      if (myStreak > 1) {
-        const sb = document.getElementById('streakBar');
-        sb.style.display = 'flex';
-        sb.textContent = `🔥 ${myStreak}-day streak — keep it going, ${myName}!`;
-      }
     }
 
     // Load team goal
@@ -469,13 +450,6 @@
     const key = myName.replace(/\s/g,'_');
     await set(ref(db, `steps/${today()}/${key}`), steps);
     myStreak = await updateStreak(myName);
-
-    // Update streak display
-    if (myStreak > 1) {
-      const sb = document.getElementById('streakBar');
-      sb.style.display = 'flex';
-      sb.textContent = `🔥 ${myStreak}-day streak — keep it going, ${myName}!`;
-    }
 
     updatePersonalGoalBar(steps);
     if (steps >= personalGoal) showMilestone('🎉', `${fmt(steps)} Steps!`, `${myName} crushed their daily goal!`);
@@ -624,7 +598,8 @@
     }
 
     // Trash talk — use only logged players for dynamic messages
-    setTrash(buildTrashTalk(loggedPlayers));
+
+    updateSmartBanner(sortedPlayers, false);
 
     // Stats — avg only over logged players, total is sum of logged
     const total = loggedPlayers.reduce((s,p) => s + p.steps, 0);
@@ -749,6 +724,7 @@
     const players = Object.entries(weekTotals)
       .map(([k,v])=>({name:k.replace(/_/g,' '),steps:v}))
       .sort((a,b)=>b.steps-a.steps);
+    updateSmartBanner(players, true);
     renderBoard(players, true);
   }
 
