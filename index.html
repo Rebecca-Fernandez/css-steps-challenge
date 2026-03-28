@@ -123,6 +123,7 @@
     .board-row.slow1 { border-left-color: #5a2020; background: #0e1515; }
     .board-row.slow2 { border-left-color: #5a3a10; background: #0e1410; }
     .board-row.slow3 { border-left-color: #2a3a10; background: #0e120e; }
+    .board-row.not-yet { opacity: 0.55; }
     .improved-badge { position: absolute; top: 10px; right: 14px; font-size: 10px; color: #00d4aa; background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); padding: 2px 7px; border-radius: 10px; }
     .row-top { display: flex; align-items: center; gap: 12px; }
     .rank { font-family: Montserrat, sans-serif; font-size: 20px; font-weight: 800; color: #6B7280; width: 32px; flex-shrink: 0; text-align: center; }
@@ -136,6 +137,7 @@
     .row-streak-lbl { font-size: 11px; color: #6B7280; margin-top: 2px; }
     .row-steps { font-family: Montserrat, sans-serif; font-size: 24px; font-weight: 800; color: #fff; line-height: 1; text-align: right; }
     .row-steps.me { color: #18ABE3; }
+    .row-steps.zero { color: #2A4D72; }
     .steps-lbl { font-size: 9px; color: #6B7280; letter-spacing: 0.1em; text-align: right; text-transform: uppercase; }
     .bar-wrap { height: 2px; background: #152840; margin: 9px 0 7px 44px; }
     .bar-fill { height: 2px; background: #18ABE3; }
@@ -584,36 +586,62 @@
     return totals;
   }
 
+  // ─── UPDATED loadBoard ───────────────────────────────────────────────────────
+  // Now shows ALL registered members every day, defaulting unlogged members to 0.
+  // This means the board truly "resets" each morning — everyone starts at 0.
   window.loadBoard = async function() {
-    const snap = await get(ref(db, `steps/${today()}`));
-    let players = [];
-    if (snap.exists()) {
-      const data = snap.val();
-      players = Object.entries(data).map(([k,v])=>({name:k.replace(/_/g,' '),steps:parseInt(v)||0})).sort((a,b)=>b.steps-a.steps);
+    // Register current user as a member first
+    if (myName) {
+      await set(ref(db, `members/${myName.replace(/\s/g,'_')}`), true);
     }
 
-    // Also log to weekly
+    // Get today's logged steps
+    const snap = await get(ref(db, `steps/${today()}`));
+    const todayData = snap.exists() ? snap.val() : {};
+
+    // Get all registered members
+    const allSnap = await get(ref(db, 'members'));
+    let players = [];
+
+    if (allSnap.exists()) {
+      const allMembers = Object.keys(allSnap.val());
+      // Build full player list — everyone starts at 0, overlay today's actual data
+      players = allMembers.map(key => ({
+        name: key.replace(/_/g, ' '),
+        steps: parseInt(todayData[key] || 0)
+      }));
+    } else {
+      // Fallback: only show who logged (no members node yet)
+      players = Object.entries(todayData).map(([k,v]) => ({
+        name: k.replace(/_/g,' '),
+        steps: parseInt(v) || 0
+      }));
+    }
+
+    // Sort: logged (steps > 0) at top by steps desc, then unlogged (steps = 0) at bottom alpha
+    const loggedPlayers = players.filter(p => p.steps > 0).sort((a,b) => b.steps - a.steps);
+    const unloggedPlayers = players.filter(p => p.steps === 0).sort((a,b) => a.name.localeCompare(b.name));
+    const sortedPlayers = [...loggedPlayers, ...unloggedPlayers];
+
+    // Also sync my steps to weekly node (existing behavior)
     if (myName) {
       const myKey = myName.replace(/\s/g,'_');
-      const mySnap = await get(ref(db, `steps/${today()}/${myKey}`));
-      if (mySnap.exists()) {
-        await set(ref(db, `weekSteps/${weekKey()}/${myKey}`), mySnap.val());
+      if (todayData[myKey]) {
+        await set(ref(db, `weekSteps/${weekKey()}/${myKey}`), todayData[myKey]);
       }
     }
 
-    // Trash talk with real names
-    setTrash(buildTrashTalk(players));
+    // Trash talk — use only logged players for dynamic messages
+    setTrash(buildTrashTalk(loggedPlayers));
 
-    // Stats
-    const total = players.reduce((s,p)=>s+p.steps,0);
-    const avg = players.length ? Math.round(total/players.length) : 0;
+    // Stats — avg only over logged players, total is sum of logged
+    const total = loggedPlayers.reduce((s,p) => s + p.steps, 0);
+    const avg = loggedPlayers.length ? Math.round(total / loggedPlayers.length) : 0;
     document.getElementById('statAvg').textContent = fmt(avg);
     document.getElementById('statTotal').textContent = fmt(total);
+    document.getElementById('statImproved').textContent = loggedPlayers.length > 0 ? loggedPlayers[0].name + '⚡' : '—';
 
-    // Most improved (placeholder — would need yesterday's data)
-    document.getElementById('statImproved').textContent = players.length > 0 ? players[0].name+'⚡' : '—';
-
-    // Team goal
+    // Team goal (based on logged steps)
     if (teamGoal > 0) {
       const pct = Math.min(100, Math.round((total/teamGoal)*100));
       document.getElementById('teamGoalFill').style.width = pct+'%';
@@ -621,45 +649,34 @@
       document.getElementById('teamGoalPct').textContent = `${pct}% of ${fmt(teamGoal)}`;
     }
 
-    // Not logged
-    const allSnap = await get(ref(db, 'members'));
-    if (allSnap.exists()) {
-      const allMembers = Object.keys(allSnap.val()).map(k=>k.replace(/_/g,' '));
-      const loggedNames = players.map(p=>p.name);
-      const notLogged = allMembers.filter(m=>!loggedNames.includes(m));
-      if (notLogged.length > 0) {
-        document.getElementById('notLoggedSection').style.display = 'block';
-        document.getElementById('notLoggedList').innerHTML = notLogged.map(n=>`<div class="not-logged-chip">${n} 👟</div>`).join('');
-        // Build name list e.g. "Horse Walker, Jake Lang and JoAnn"
-        let nameList = '';
-        if (notLogged.length === 1) {
-          nameList = notLogged[0];
-        } else {
-          nameList = notLogged.slice(0,-1).join(', ') + ' and ' + notLogged[notLogged.length-1];
-        }
-        const roasts = [
-          `${nameList} are probably stuck in a meeting. We've heard that one before. 😏`,
-          `${nameList} are 'on their way' to log steps. Since Tuesday. 🐢`,
-          `${nameList}? Hello? Anyone home? 👀`,
-          `Still waiting on ${nameList}... 🦗`,
-        ];
-        const roast = roasts[Math.floor(Math.random() * roasts.length)];
-        document.getElementById('notLoggedRoast').textContent = roast;
-      } else {
-        document.getElementById('notLoggedSection').style.display = 'none';
-      }
+    // Not logged section — anyone with 0 steps today
+    const notLogged = unloggedPlayers.map(p => p.name);
+    if (notLogged.length > 0) {
+      document.getElementById('notLoggedSection').style.display = 'block';
+      document.getElementById('notLoggedList').innerHTML = notLogged.map(n => `<div class="not-logged-chip">${n} 👟</div>`).join('');
+      let nameList = notLogged.length === 1
+        ? notLogged[0]
+        : notLogged.slice(0,-1).join(', ') + ' and ' + notLogged[notLogged.length-1];
+      const roasts = [
+        `${nameList} are probably stuck in a meeting. We've heard that one before. 😏`,
+        `${nameList} are 'on their way' to log steps. Since Tuesday. 🐢`,
+        `${nameList}? Hello? Anyone home? 👀`,
+        `Still waiting on ${nameList}... 🦗`,
+      ];
+      document.getElementById('notLoggedRoast').textContent = roasts[Math.floor(Math.random() * roasts.length)];
+    } else {
+      document.getElementById('notLoggedSection').style.display = 'none';
     }
 
-    // Register member
-    if (myName) {
-      await set(ref(db, `members/${myName.replace(/\s/g,'_')}`), true);
-    }
-
-    renderBoard(players);
+    renderBoard(sortedPlayers, false, loggedPlayers.length);
   };
+  // ─────────────────────────────────────────────────────────────────────────────
 
-  function renderBoard(players, isWeekly) {
-    const total = players.length;
+  // ─── UPDATED renderBoard ─────────────────────────────────────────────────────
+  // loggedCount = number of players at top of list who have actually logged steps.
+  // Trophy badges and shame animals only apply within the logged group.
+  function renderBoard(players, isWeekly, loggedCount) {
+    if (loggedCount === undefined) loggedCount = players.filter(p => p.steps > 0).length;
     const top = players[0]?.steps || 0;
     const board = document.getElementById('board');
     board.innerHTML = '';
@@ -670,40 +687,49 @@
     }
 
     players.forEach((p, i) => {
-      const pct = Math.round((p.steps/top)*100);
-      const fb = total-1-i;
+      const pct = top > 0 ? Math.round((p.steps / top) * 100) : 0;
       const isMe = p.name.toLowerCase() === myName.toLowerCase();
+      const hasLogged = p.steps > 0;
+
+      // Position from bottom WITHIN the logged group only
+      const fromBottom = hasLogged ? (loggedCount - 1 - i) : -1;
+      const isShamed = !isWeekly && hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe;
+      const isTrophy = hasLogged && i < 3;
 
       let rc = 'board-row';
       if (isMe) rc += ' me';
-      else if (i===0) rc += ' r0';
-      else if (i===1) rc += ' r1';
-      else if (i===2) rc += ' r2';
-      if (fb<3 && !isMe && !isWeekly) rc += ' '+sR[fb];
+      else if (isTrophy && i === 0) rc += ' r0';
+      else if (isTrophy && i === 1) rc += ' r1';
+      else if (isTrophy && i === 2) rc += ' r2';
+      if (isShamed) rc += ' ' + sR[fromBottom];
+      if (!hasLogged && !isWeekly) rc += ' not-yet';
 
       const div = document.createElement('div');
       div.className = rc;
-      const personalRoast = (fb<3 && !isMe && !isWeekly) ? getPersonalRoast(p.name) : '';
+      const personalRoast = isShamed ? getPersonalRoast(p.name) : '';
+
       div.innerHTML = `
         <div class="row-top">
-          <div class="rank ${i<3?rankC[i]:''}">${String(i+1).padStart(2,'0')}</div>
+          <div class="rank ${isTrophy ? rankC[i] : ''}">${String(i+1).padStart(2,'0')}</div>
           <div style="flex:1">
-            <div class="row-name ${isMe?'me':''}">${p.name}${fb<3&&!isMe&&!isWeekly?' '+sA[fb]:''}</div>
-            ${i<3?`<div class="top-label ${topL[i]}">${topB[i]}</div>`:''}
-            ${fb<3&&!isMe&&!isWeekly?`<div class="animal-label ${sC[fb]}">${sT[fb]}</div>`:''}
-            ${personalRoast?`<div style="font-size:10px;color:#6B7280;font-style:italic;margin-top:3px;">${personalRoast}</div>`:''}
+            <div class="row-name ${isMe?'me':''}">${p.name}${isShamed?' '+sA[fromBottom]:''}</div>
+            ${isTrophy ? `<div class="top-label ${topL[i]}">${topB[i]}</div>` : ''}
+            ${isShamed ? `<div class="animal-label ${sC[fromBottom]}">${sT[fromBottom]}</div>` : ''}
+            ${personalRoast ? `<div style="font-size:10px;color:#6B7280;font-style:italic;margin-top:3px;">${personalRoast}</div>` : ''}
+            ${!hasLogged && !isWeekly ? `<div style="font-size:10px;color:#2A4D72;letter-spacing:0.08em;margin-top:2px;text-transform:uppercase;">Not logged yet</div>` : ''}
           </div>
           <div>
-            <div class="row-steps ${isMe?'me':''}">${fmt(p.steps)}</div>
+            <div class="row-steps ${isMe?'me':''} ${!hasLogged?'zero':''}">${hasLogged ? fmt(p.steps) : '—'}</div>
             <div class="steps-lbl">${isWeekly?'this week':'steps'}</div>
           </div>
         </div>
         <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
         <div class="reacts" id="reacts-${i}"></div>`;
       board.appendChild(div);
-      loadReacts(p.name, i);
+      if (hasLogged) loadReacts(p.name, i);
     });
   }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   async function loadReacts(name, idx) {
     const key = name.replace(/\s/g,'_');
