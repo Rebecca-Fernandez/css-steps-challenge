@@ -766,8 +766,12 @@
     currentView = v;
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    if (v === 'week') loadWeekBoard();
-    else loadBoard();
+    if (v === 'week') {
+      document.getElementById('notLoggedSection').style.display = 'none';
+      loadWeekBoard();
+    } else {
+      loadBoard(); // loadBoard handles showing/hiding notLoggedSection
+    }
   };
 
   async function loadWeekBoard() {
