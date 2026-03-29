@@ -97,8 +97,6 @@
     .team-goal-input { flex: 1; background: #01152C; border: 1px solid #152840; color: #fff; font-family: Montserrat, sans-serif; font-size: 14px; padding: 8px 12px; outline: none; }
     .goal-save { background: #18ABE3; border: none; color: #fff; padding: 0 14px; cursor: pointer; font-family: Montserrat, sans-serif; font-size: 13px; font-weight: 700; border-radius: 4px; }
 
-
-
     /* View toggle */
     .view-toggle { display: flex; margin-bottom: 12px; border: 1px solid #152840; border-radius: 4px; overflow: hidden; }
     .view-btn { flex: 1; padding: 8px; font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: none; color: #6B7280; cursor: pointer; }
@@ -263,8 +261,6 @@
       </div>
     </div>
 
-
-
     <div class="view-toggle">
       <button class="view-btn active" onclick="setView('today',this)">Today</button>
       <button class="view-btn" onclick="setView('week',this)">This Week</button>
@@ -316,19 +312,30 @@
   let teamGoal = 0;
   let personalGoal = parseInt(localStorage.getItem('css-personal-goal') || '10000');
 
-  function today() { return new Date().toISOString().split('T')[0]; }
+  // ─── TIMEZONE FIX ────────────────────────────────────────────────────────────
+  // All date keys now use Eastern Time (America/New_York) instead of UTC.
+  // This prevents steps logged after 8 PM ET from landing on the next day's key.
+  function getETDateStr(date) {
+    return (date || new Date()).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  }
+  function today() { return getETDateStr(); }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   function fmt(n) { return Number(n||0).toLocaleString(); }
+
   function weekKey() {
-    const d = new Date();
+    const etStr = getETDateStr();
+    const d = new Date(etStr + 'T12:00:00'); // noon avoids DST edge cases
     const day = d.getDay();
-    const diff = d.getDate() - day + (day===0?-6:1);
-    const mon = new Date(d.setDate(diff));
-    return mon.toISOString().split('T')[0];
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(d);
+    mon.setDate(diff);
+    return getETDateStr(mon);
   }
 
-  // Date
+  // Date label in header
   document.getElementById('datelbl').textContent =
-    new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+    new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York' }).toUpperCase();
 
   // Smart banner — personalized rank-based message
   function updateSmartBanner(players, isWeekly) {
@@ -380,16 +387,16 @@
     return generalRoasts[Math.floor(Math.random() * generalRoasts.length)](name);
   }
 
-
-
   // Streak
   async function updateStreak(name) {
     const sk = `streaks/${name.replace(/\s/g,'_')}`;
     const snap = await get(ref(db, sk));
     let data = snap.exists() ? snap.val() : { lastDate: null, streak: 0 };
-    const yd = new Date(); yd.setDate(yd.getDate()-1);
-    const ydStr = yd.toISOString().split('T')[0];
     const td = today();
+    // Calculate yesterday in ET
+    const ydDate = new Date(td + 'T12:00:00');
+    ydDate.setDate(ydDate.getDate() - 1);
+    const ydStr = getETDateStr(ydDate);
     if (data.lastDate === td) { return data.streak; }
     else if (data.lastDate === ydStr) { data.streak++; data.lastDate = td; }
     else { data.streak = 1; data.lastDate = td; }
@@ -479,14 +486,15 @@
     const isHidden = row.style.display === 'none';
     row.style.display = isHidden ? 'block' : 'none';
     if (isHidden) {
-      // Populate last 7 days
+      // Populate last 7 days using ET dates
       const sel = document.getElementById('pastDaySelect');
       sel.innerHTML = '';
+      const todayStr = today();
       for (let i = 1; i <= 7; i++) {
-        const d = new Date();
+        const d = new Date(todayStr + 'T12:00:00');
         d.setDate(d.getDate() - i);
-        const val = d.toISOString().split('T')[0];
-        const label = d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+        const val = getETDateStr(d);
+        const label = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
         const opt = document.createElement('option');
         opt.value = val;
         opt.textContent = label;
@@ -533,16 +541,17 @@
   }
 
   async function calcWeekTotals() {
-    // Get all 7 days of this week and sum steps per person
+    // Get all 7 days of this week (ET) and sum steps per person
     const totals = {};
-    const monday = new Date();
+    const etStr = today();
+    const monday = new Date(etStr + 'T12:00:00');
     const day = monday.getDay();
-    const diff = monday.getDate() - day + (day===0?-6:1);
+    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
     monday.setDate(diff);
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getETDateStr(d);
       const snap = await get(ref(db, `steps/${dateStr}`));
       if (snap.exists()) {
         Object.entries(snap.val()).forEach(([k,v]) => {
@@ -554,15 +563,13 @@
   }
 
   // ─── UPDATED loadBoard ───────────────────────────────────────────────────────
-  // Now shows ALL registered members every day, defaulting unlogged members to 0.
-  // This means the board truly "resets" each morning — everyone starts at 0.
   window.loadBoard = async function() {
     // Register current user as a member first
     if (myName) {
       await set(ref(db, `members/${myName.replace(/\s/g,'_')}`), true);
     }
 
-    // Get today's logged steps
+    // Get today's logged steps (using ET date key)
     const snap = await get(ref(db, `steps/${today()}`));
     const todayData = snap.exists() ? snap.val() : {};
 
@@ -572,25 +579,23 @@
 
     if (allSnap.exists()) {
       const allMembers = Object.keys(allSnap.val());
-      // Build full player list — everyone starts at 0, overlay today's actual data
       players = allMembers.map(key => ({
         name: key.replace(/_/g, ' '),
         steps: parseInt(todayData[key] || 0)
       }));
     } else {
-      // Fallback: only show who logged (no members node yet)
       players = Object.entries(todayData).map(([k,v]) => ({
         name: k.replace(/_/g,' '),
         steps: parseInt(v) || 0
       }));
     }
 
-    // Sort: logged (steps > 0) at top by steps desc, then unlogged (steps = 0) at bottom alpha
+    // Sort: logged at top by steps desc, unlogged at bottom alpha
     const loggedPlayers = players.filter(p => p.steps > 0).sort((a,b) => b.steps - a.steps);
     const unloggedPlayers = players.filter(p => p.steps === 0).sort((a,b) => a.name.localeCompare(b.name));
     const sortedPlayers = [...loggedPlayers, ...unloggedPlayers];
 
-    // Also sync my steps to weekly node (existing behavior)
+    // Sync my steps to weekly node
     if (myName) {
       const myKey = myName.replace(/\s/g,'_');
       if (todayData[myKey]) {
@@ -598,18 +603,16 @@
       }
     }
 
-    // Trash talk — use only logged players for dynamic messages
-
     updateSmartBanner(sortedPlayers, false);
 
-    // Stats — avg only over logged players, total is sum of logged
+    // Stats
     const total = loggedPlayers.reduce((s,p) => s + p.steps, 0);
     const avg = loggedPlayers.length ? Math.round(total / loggedPlayers.length) : 0;
     document.getElementById('statAvg').textContent = fmt(avg);
     document.getElementById('statTotal').textContent = fmt(total);
     document.getElementById('statImproved').textContent = loggedPlayers.length > 0 ? loggedPlayers[0].name + '⚡' : '—';
 
-    // Team goal (based on logged steps)
+    // Team goal
     if (teamGoal > 0) {
       const pct = Math.min(100, Math.round((total/teamGoal)*100));
       document.getElementById('teamGoalFill').style.width = pct+'%';
@@ -617,14 +620,10 @@
       document.getElementById('teamGoalPct').textContent = `${pct}% of ${fmt(teamGoal)}`;
     }
 
-
     renderBoard(sortedPlayers, false, loggedPlayers.length);
   };
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // ─── UPDATED renderBoard ─────────────────────────────────────────────────────
-  // loggedCount = number of players at top of list who have actually logged steps.
-  // Trophy badges and shame animals only apply within the logged group.
   function renderBoard(players, isWeekly, loggedCount) {
     if (loggedCount === undefined) loggedCount = players.filter(p => p.steps > 0).length;
     const top = players[0]?.steps || 0;
@@ -641,7 +640,6 @@
       const isMe = p.name.toLowerCase() === myName.toLowerCase();
       const hasLogged = p.steps > 0;
 
-      // Position from bottom WITHIN the logged group only
       const fromBottom = hasLogged ? (loggedCount - 1 - i) : -1;
       const isShamed = !isWeekly && hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe;
       const isTrophy = hasLogged && i < 3;
@@ -679,7 +677,6 @@
       if (hasLogged) loadReacts(p.name, i);
     });
   }
-  // ─────────────────────────────────────────────────────────────────────────────
 
   async function loadReacts(name, idx) {
     const key = name.replace(/\s/g,'_');
