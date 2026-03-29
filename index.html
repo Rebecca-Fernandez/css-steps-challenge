@@ -137,6 +137,10 @@
     .react-add { background: none; border: 1px dashed #152840; padding: 3px 9px; font-size: 10px; cursor: pointer; color: #6B7280; border-radius: 4px; }
     .picker { display: none; gap: 8px; margin: 7px 0 0 44px; flex-wrap: wrap; }
     .picker.open { display: flex; }
+    .day-pills { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .day-pill { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 600; background: #01152C; border: 1px solid #152840; padding: 2px 7px; border-radius: 10px; color: #6B7280; white-space: nowrap; }
+    .day-pill.has-steps { color: #18ABE3; border-color: rgba(24,171,227,0.3); }
+    .day-pill.zero-steps { color: #ff6b6b; border-color: rgba(255,107,107,0.3); }
     .footer { font-size: 10px; color: rgba(107,114,128,0.4); text-align: center; margin-top: 20px; }
 
     /* Milestone */
@@ -531,8 +535,8 @@
   };
 
   async function loadWeekChampion() {
-    const weekTotals = await calcWeekTotals();
-    const sorted = Object.entries(weekTotals).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
+    const { totals } = await calcWeekTotals();
+    const sorted = Object.entries(totals).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
     if (sorted.length === 0) return;
     const champ = sorted[0];
     document.getElementById('champName').textContent = champ.name;
@@ -541,8 +545,10 @@
   }
 
   async function calcWeekTotals() {
-    // Get all 7 days of this week (ET) and sum steps per person
+    // Get all 7 days of this week (ET), return totals and daily breakdown
     const totals = {};
+    const daily = {}; // daily[personKey][dateStr] = steps
+    const days = [];  // ordered list of {dateStr, label} for the week so far
     const etStr = today();
     const monday = new Date(etStr + 'T12:00:00');
     const day = monday.getDay();
@@ -552,14 +558,19 @@
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const dateStr = getETDateStr(d);
+      if (dateStr > etStr) break; // don't include future days
+      const label = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'America/New_York' });
+      days.push({ dateStr, label });
       const snap = await get(ref(db, `steps/${dateStr}`));
       if (snap.exists()) {
         Object.entries(snap.val()).forEach(([k,v]) => {
           totals[k] = (totals[k] || 0) + (parseInt(v) || 0);
+          if (!daily[k]) daily[k] = {};
+          daily[k][dateStr] = parseInt(v) || 0;
         });
       }
     }
-    return totals;
+    return { totals, daily, days };
   }
 
   // ─── UPDATED loadBoard ───────────────────────────────────────────────────────
@@ -624,7 +635,7 @@
   };
   // ─────────────────────────────────────────────────────────────────────────────
 
-  function renderBoard(players, isWeekly, loggedCount) {
+  function renderBoard(players, isWeekly, loggedCount, daily, last3) {
     if (loggedCount === undefined) loggedCount = players.filter(p => p.steps > 0).length;
     const top = players[0]?.steps || 0;
     const board = document.getElementById('board');
@@ -656,6 +667,18 @@
       div.className = rc;
       const personalRoast = isShamed ? getPersonalRoast(p.name) : '';
 
+      // Build day pills for weekly view (last 3 days)
+      let pillsHtml = '';
+      if (isWeekly && last3 && last3.length > 0) {
+        const pKey = p.key || p.name.replace(/\s/g,'_');
+        const pills = last3.map(({ dateStr, label }) => {
+          const s = (daily && daily[pKey] && daily[pKey][dateStr]) || 0;
+          const cls = s > 0 ? 'has-steps' : 'zero-steps';
+          return `<span class="day-pill ${cls}">${label} ${s > 0 ? fmt(s) : '0'}</span>`;
+        }).join('');
+        pillsHtml = `<div class="day-pills">${pills}</div>`;
+      }
+
       div.innerHTML = `
         <div class="row-top">
           <div class="rank ${isTrophy ? rankC[i] : ''}">${String(i+1).padStart(2,'0')}</div>
@@ -665,6 +688,7 @@
             ${isShamed ? `<div class="animal-label ${sC[fromBottom]}">${sT[fromBottom]}</div>` : ''}
             ${personalRoast ? `<div style="font-size:10px;color:#6B7280;font-style:italic;margin-top:3px;">${personalRoast}</div>` : ''}
             ${!hasLogged && !isWeekly ? `<div style="font-size:10px;color:#2A4D72;letter-spacing:0.08em;margin-top:2px;text-transform:uppercase;">Not logged yet</div>` : ''}
+            ${pillsHtml}
           </div>
           <div>
             <div class="row-steps ${isMe?'me':''} ${!hasLogged?'zero':''}">${hasLogged ? fmt(p.steps) : '—'}</div>
@@ -718,12 +742,24 @@
   };
 
   async function loadWeekBoard() {
-    const weekTotals = await calcWeekTotals();
-    const players = Object.entries(weekTotals)
-      .map(([k,v])=>({name:k.replace(/_/g,' '),steps:v}))
-      .sort((a,b)=>b.steps-a.steps);
+    const { totals, daily, days } = await calcWeekTotals();
+    // Get all members so unlogged members still appear
+    const allSnap = await get(ref(db, 'members'));
+    let players = [];
+    if (allSnap.exists()) {
+      players = Object.keys(allSnap.val()).map(key => ({
+        name: key.replace(/_/g, ' '),
+        steps: totals[key] || 0,
+        key
+      }));
+    } else {
+      players = Object.entries(totals).map(([k,v]) => ({ name: k.replace(/_/g,' '), steps: v, key: k }));
+    }
+    players.sort((a,b) => b.steps - a.steps);
+    // Get last 3 days that have passed
+    const last3 = days.slice(-3);
     updateSmartBanner(players, true);
-    renderBoard(players, true);
+    renderBoard(players, true, undefined, daily, last3);
   }
 
   function showMilestone(e, t, s) {
