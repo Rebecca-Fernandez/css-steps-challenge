@@ -19,6 +19,14 @@
     .wordmark-main { font-family: Montserrat, sans-serif; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 0.04em; display: block; }
     .wordmark-sub { font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 400; color: #fff; letter-spacing: 0.14em; display: block; margin-top: 2px; }
     .cyan-rule { height: 3px; background: #18ABE3; }
+
+    /* 90-Day Countdown Bar */
+    .countdown-bar { background: #1a1200; padding: 7px 20px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #3a2800; border-bottom: 1px solid #3a2800; }
+    .countdown-label { font-family: Montserrat, sans-serif; font-size: 10px; font-weight: 700; color: #f59e0b; letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+    .countdown-days { font-family: Montserrat, sans-serif; font-size: 12px; font-weight: 700; color: #f59e0b; white-space: nowrap; }
+    .countdown-track { flex: 1; height: 4px; background: #3a2800; border-radius: 2px; overflow: hidden; }
+    .countdown-fill { height: 100%; background: #f59e0b; border-radius: 2px; transition: width 0.5s; }
+
     .sub-bar { background: #071220; padding: 9px 20px; display: flex; justify-content: space-between; align-items: center; }
     .sub-title { font-family: Montserrat, sans-serif; font-size: 11px; font-weight: 600; color: #18ABE3; letter-spacing: 0.15em; text-transform: uppercase; }
     .sub-date { font-size: 11px; color: #6B7280; }
@@ -178,6 +186,12 @@
       <img src="White transparent EMAIL (2).png" alt="Coastal Steel Structures" style="height:44px;width:auto;display:block;"/>
     </div>
     <div class="cyan-rule"></div>
+    <!-- 90-Day Challenge Countdown -->
+    <div class="countdown-bar" id="countdownBar">
+      <div class="countdown-label">90-Day Challenge</div>
+      <div class="countdown-track"><div class="countdown-fill" id="countdownFill" style="width:0%"></div></div>
+      <div class="countdown-days" id="countdownDays"></div>
+    </div>
     <!-- Challenge switcher tabs -->
     <div class="challenge-tabs hidden" id="challengeTabs">
       <button class="ch-tab active" id="tabSteps" onclick="switchChallenge('steps')">👟 STEPS</button>
@@ -357,6 +371,33 @@
   };
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ─── 90-DAY COUNTDOWN ────────────────────────────────────────────────────────
+  const CHALLENGE_START = '2026-04-01'; // ET date
+  const CHALLENGE_TOTAL_DAYS = 90;
+
+  function initCountdown() {
+    const etToday = getETDateStr();
+    const start = new Date(CHALLENGE_START + 'T12:00:00');
+    const end = new Date(start);
+    end.setDate(end.getDate() + CHALLENGE_TOTAL_DAYS - 1);
+    const todayDate = new Date(etToday + 'T12:00:00');
+
+    const daysPassed = Math.max(0, Math.floor((todayDate - start) / 86400000) + 1);
+    const daysLeft = Math.max(0, CHALLENGE_TOTAL_DAYS - daysPassed + 1);
+    const pct = Math.min(100, Math.round((daysPassed / CHALLENGE_TOTAL_DAYS) * 100));
+
+    document.getElementById('countdownFill').style.width = pct + '%';
+
+    if (daysLeft === 0) {
+      document.getElementById('countdownDays').textContent = 'Challenge Complete! 🏆';
+    } else if (daysLeft === 1) {
+      document.getElementById('countdownDays').textContent = 'Last day! 🔥';
+    } else {
+      document.getElementById('countdownDays').textContent = daysLeft + ' days left';
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const EMOJI = ['🔥','💪','👟','👏','😤','🐢'];
   const topB = ['👑 Leader','🥈 Runner-up','🥉 Third'];
   const topL = ['gold','silver','bronze'];
@@ -522,6 +563,9 @@
     document.getElementById('challengeTabs').classList.remove('hidden');
     document.getElementById('appBody').classList.add('visible');
     document.getElementById('displayName').textContent = myName;
+
+    // Initialize the 90-day countdown
+    initCountdown();
 
     // Apply saved challenge preference
     await applyChallenge(currentChallenge, false);
