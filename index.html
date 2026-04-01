@@ -372,14 +372,12 @@
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ─── 90-DAY COUNTDOWN ────────────────────────────────────────────────────────
-  const CHALLENGE_START = '2026-04-01'; // ET date
+  const CHALLENGE_START = '2026-04-01';
   const CHALLENGE_TOTAL_DAYS = 90;
 
   function initCountdown() {
     const etToday = getETDateStr();
     const start = new Date(CHALLENGE_START + 'T12:00:00');
-    const end = new Date(start);
-    end.setDate(end.getDate() + CHALLENGE_TOTAL_DAYS - 1);
     const todayDate = new Date(etToday + 'T12:00:00');
 
     const daysPassed = Math.max(0, Math.floor((todayDate - start) / 86400000) + 1);
@@ -407,14 +405,12 @@
   const sC = ['snail','turtle','sloth'];
   const sR = ['slow1','slow2','slow3'];
 
-  // ─── BUG FIX: generalRoasts was referenced but never defined ─────────────────
   const generalRoasts = [
     name => `${name} is giving serious participation trophy energy. 🏅`,
     name => `${name}'s legs called. They're requesting a day off. 🦵`,
     name => `${name} is walking like the weekend started early. 😴`,
     name => `${name}: showing up and that's… something. 🫤`,
   ];
-  // ─────────────────────────────────────────────────────────────────────────────
 
   let myName = localStorage.getItem('css-steps-name') || '';
   let myStreak = 0;
@@ -443,7 +439,6 @@
     return getETDateStr(mon);
   }
 
-  // Date label in header
   document.getElementById('datelbl').textContent =
     new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York' }).toUpperCase();
 
@@ -461,7 +456,6 @@
     let msg = '';
 
     if (isPushups) {
-      // Push-up weekly messages (always weekly)
       if (!hasLogged) {
         msg = `${myName} hasn't logged push-ups yet this week. The floor is literally right there. 🫸`;
       } else if (rank === 1) {
@@ -564,13 +558,9 @@
     document.getElementById('appBody').classList.add('visible');
     document.getElementById('displayName').textContent = myName;
 
-    // Initialize the 90-day countdown
     initCountdown();
-
-    // Apply saved challenge preference
     await applyChallenge(currentChallenge, false);
 
-    // Real-time listener for steps (today view only)
     onValue(ref(db, `steps/${today()}`), () => {
       if (currentChallenge === 'steps' && currentView === 'today') loadBoard();
     });
@@ -586,34 +576,25 @@
   async function applyChallenge(ch, reload) {
     const cfg = CHALLENGE_CONFIG[ch];
 
-    // Tab styles
     document.getElementById('tabSteps').classList.toggle('active', ch === 'steps');
     document.getElementById('tabPushups').classList.toggle('active', ch === 'pushups');
-
-    // Sub-title
     document.getElementById('subTitle').textContent = cfg.subTitle;
-
-    // Log panel
     document.getElementById('logPanelLabel').textContent = cfg.logLabel;
     document.getElementById('stepInput').placeholder = cfg.placeholder;
     document.getElementById('goalLblTxt').textContent = `My Daily Goal (${cfg.unit})`;
 
-    // Personal goal
     personalGoal = parseInt(localStorage.getItem(cfg.goalKey) || cfg.defaultGoal);
     document.getElementById('personalGoalInput').value = personalGoal;
     document.getElementById('personalGoalFill').style.width = '0%';
     document.getElementById('personalGoalPct').textContent = '0%';
 
-    // Load my logged amount today for personal goal bar
     if (myName) {
       const mySnap = await get(ref(db, `${cfg.dataPath}/${today()}/${myName.replace(/\s/g,'_')}`));
       if (mySnap.exists()) updatePersonalGoalBar(mySnap.val());
     }
 
-    // Team goal panel
     document.getElementById('teamGoalPanel').style.display = cfg.hasTeamGoal ? '' : 'none';
 
-    // View toggle: hide for push-ups (always weekly)
     const vt = document.getElementById('viewToggle');
     if (cfg.weeklyOnly) {
       vt.style.display = 'none';
@@ -621,11 +602,9 @@
     } else {
       vt.style.display = 'flex';
       currentView = 'today';
-      // Reset toggle to Today
       document.querySelectorAll('.view-btn').forEach((b,i) => b.classList.toggle('active', i === 0));
     }
 
-    // Stat labels
     if (cfg.weeklyOnly) {
       document.getElementById('statAvgLbl').textContent = 'Weekly Avg';
       document.getElementById('statTotalLbl').textContent = 'Total This Wk';
@@ -636,30 +615,19 @@
       document.getElementById('statImprovedLbl').textContent = 'Most Improved';
     }
 
-    // Register member
-    if (myName) {
-      await set(ref(db, `${cfg.membersPath}/${myName.replace(/\s/g,'_')}`), true);
-    }
-
-    // Load streak for this challenge
+    if (myName) await set(ref(db, `${cfg.membersPath}/${myName.replace(/\s/g,'_')}`), true);
     if (myName) myStreak = await loadStreak(myName);
 
-    // Load team goal if steps
     if (ch === 'steps') {
       const tgSnap = await get(ref(db, 'teamGoal'));
       if (tgSnap.exists()) teamGoal = tgSnap.val();
     }
 
-    // Champion
     loadWeekChampion();
 
-    // Board
     if (reload || true) {
-      if (cfg.weeklyOnly) {
-        loadWeekBoard();
-      } else {
-        loadBoard();
-      }
+      if (cfg.weeklyOnly) loadWeekBoard();
+      else loadBoard();
     }
   }
 
@@ -675,7 +643,6 @@
     updatePersonalGoalBar(amount);
     if (amount >= personalGoal) showMilestone('🎉', `${fmt(amount)} ${cfg.label}!`, `${myName} crushed their daily goal!`);
 
-    // Sync to weekSteps node for steps challenge
     if (currentChallenge === 'steps') {
       await set(ref(db, `weekSteps/${weekKey()}/${key}`), amount);
     }
@@ -689,7 +656,6 @@
     else loadBoard();
   };
 
-  // Legacy alias so any existing onclick="logSteps()" calls still work
   window.logSteps = window.logActivity;
 
   function updatePersonalGoalBar(amount) {
@@ -742,7 +708,6 @@
     document.getElementById('pastStepInput').value = '';
   };
 
-  // Legacy alias
   window.logPastSteps = window.logPastActivity;
 
   window.toggleGoalEdit = function() {
@@ -776,7 +741,7 @@
     document.getElementById('championBanner').style.display = 'flex';
   }
 
-  // ─── CALC WEEK TOTALS (challenge-aware) ──────────────────────────────────────
+  // ─── CALC WEEK TOTALS ────────────────────────────────────────────────────────
   async function calcWeekTotals() {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
     const totals = {};
@@ -806,7 +771,7 @@
     return { totals, daily, days };
   }
 
-  // ─── LOAD BOARD (Today — steps only) ─────────────────────────────────────────
+  // ─── LOAD BOARD (Today) ───────────────────────────────────────────────────────
   window.loadBoard = async function() {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
     if (myName) await set(ref(db, `${cfg.membersPath}/${myName.replace(/\s/g,'_')}`), true);
@@ -832,7 +797,6 @@
     const unloggedPlayers = players.filter(p => p.steps === 0).sort((a,b) => a.name.localeCompare(b.name));
     const sortedPlayers = [...loggedPlayers, ...unloggedPlayers];
 
-    // Sync my steps to weekSteps node (steps only)
     if (myName && currentChallenge === 'steps') {
       const myKey = myName.replace(/\s/g,'_');
       if (todayData[myKey]) await set(ref(db, `weekSteps/${weekKey()}/${myKey}`), todayData[myKey]);
@@ -888,8 +852,9 @@
       const hasLogged = p.steps > 0;
 
       const fromBottom = hasLogged ? (loggedCount - 1 - i) : -1;
-      const isShamed = hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe;
       const isTrophy = hasLogged && i < 3;
+      // Never shame a player who is also in a trophy position (handles solo-logger edge case)
+      const isShamed = hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe && !isTrophy;
 
       let rc = 'board-row';
       if (isMe) rc += ' me';
@@ -974,7 +939,7 @@
   // ─── VIEW TOGGLE ─────────────────────────────────────────────────────────────
   window.setView = function(v, btn) {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
-    if (cfg.weeklyOnly) return; // push-ups always weekly
+    if (cfg.weeklyOnly) return;
     currentView = v;
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
