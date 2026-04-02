@@ -219,6 +219,7 @@
       <div class="join-prompt">Enter your name to join the board</div>
       <input class="join-input" id="joinInput" type="text" placeholder="Your name" autocomplete="off"/>
       <button class="join-btn" onclick="joinBoard()">JOIN THE BOARD →</button>
+      <div id="fuzzyWarning" style="display:none;margin-top:12px;background:#1a2a0a;border:1px solid #4a7a1a;border-left:3px solid #a3e635;padding:10px 12px;font-size:12px;color:#a3e635;"></div>
       <div class="join-footer">Let's get healthy together! 💪</div>
     </div>
 
@@ -533,12 +534,47 @@
     return snap.exists() ? (snap.val().streak || 0) : 0;
   }
 
+  // ─── FUZZY MATCH ─────────────────────────────────────────────────────────────
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
+    for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    return dp[m][n];
+  }
+
+  function normalize(name) { return name.toLowerCase().replace(/\s/g,''); }
+
   // ─── JOIN ─────────────────────────────────────────────────────────────────────
-  window.joinBoard = async function() {
+  window.joinBoard = async function(force) {
     const name = document.getElementById('joinInput').value.trim();
     if (!name) return;
-    myName = name;
-    localStorage.setItem('css-steps-name', name);
+
+    if (!force) {
+      const snap = await get(ref(db, 'members'));
+      if (snap.exists()) {
+        const members = Object.keys(snap.val()).map(k => k.replace(/_/g,' '));
+        const input = normalize(name);
+        const match = members.find(m => {
+          const dist = levenshtein(input, normalize(m));
+          return dist > 0 && dist <= 2;
+        });
+        if (match) {
+          const warn = document.getElementById('fuzzyWarning');
+          warn.style.display = 'block';
+          warn.innerHTML = `Did you mean <strong style="color:#fff">${match}</strong>? A similar name already exists.<br>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button onclick="document.getElementById('joinInput').value='${match}';joinBoard(true)" style="flex:1;background:#18ABE3;border:none;color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:7px;cursor:pointer;border-radius:4px;">USE "${match.toUpperCase()}"</button>
+              <button onclick="joinBoard(true)" style="flex:1;background:none;border:1px solid #4a7a1a;color:#a3e635;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;padding:7px;cursor:pointer;border-radius:4px;">KEEP MY NAME</button>
+            </div>`;
+          return;
+        }
+      }
+    }
+
+    document.getElementById('fuzzyWarning').style.display = 'none';
+    myName = document.getElementById('joinInput').value.trim();
+    localStorage.setItem('css-steps-name', myName);
     showApp();
   };
 
@@ -853,7 +889,6 @@
 
       const fromBottom = hasLogged ? (loggedCount - 1 - i) : -1;
       const isTrophy = hasLogged && i < 3;
-      // Never shame a player who is also in a trophy position (handles solo-logger edge case)
       const isShamed = hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe && !isTrophy;
 
       let rc = 'board-row';
