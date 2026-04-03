@@ -237,7 +237,7 @@
     <div class="champion-banner" id="championBanner" style="display:none">
       <div class="champion-emoji" id="champEmoji">👑</div>
       <div>
-        <div class="champion-title" id="champTitle">Champion of the Week</div>
+        <div class="champion-title" id="champTitle">Challenge Leader</div>
         <div class="champion-name" id="champName"></div>
         <div class="champion-sub" id="champSub"></div>
       </div>
@@ -295,7 +295,7 @@
 
     <div class="view-toggle" id="viewToggle">
       <button class="view-btn active" onclick="setView('today',this)">Today</button>
-      <button class="view-btn" onclick="setView('week',this)">This Week</button>
+      <button class="view-btn" onclick="setView('challenge',this)">90-Day Total</button>
     </div>
 
     <div class="board-hdr">
@@ -346,7 +346,7 @@
       goalKey:       'css-personal-goal',
       weeklyOnly:    false,
       hasTeamGoal:   true,
-      champTitle:    'Champion of the Week',
+      champTitle:    'Challenge Leader',
       champEmoji:    '👑',
       subTitle:      "Who's Walking?",
     },
@@ -365,7 +365,7 @@
       goalKey:       'css-pushup-goal',
       weeklyOnly:    true,
       hasTeamGoal:   false,
-      champTitle:    'Push-Up Champ of the Week',
+      champTitle:    'Push-Up Challenge Leader',
       champEmoji:    '💪',
       subTitle:      "Who's Pushing?",
     }
@@ -444,7 +444,7 @@
     new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York' }).toUpperCase();
 
   // ─── SMART BANNER ────────────────────────────────────────────────────────────
-  function updateSmartBanner(players, isWeekly) {
+  function updateSmartBanner(players, isChallengeTotal) {
     if (!myName) return;
     const myIdx = players.findIndex(p => p.name.toLowerCase() === myName.toLowerCase());
     const rank = myIdx + 1;
@@ -470,7 +470,7 @@
       } else {
         msg = `${myName} is mid-pack on push-ups. The top is within reach. Just… push. 💪`;
       }
-    } else if (!isWeekly) {
+    } else if (!isChallengeTotal) {
       if (!hasLogged) {
         msg = `${myName} hasn't logged yet. The board is watching. Silently judging. 👀`;
       } else if (rank === 1) {
@@ -486,15 +486,15 @@
       }
     } else {
       if (rank === 1) {
-        msg = `${myName} owns the week so far. Don't get cozy. 🔥`;
+        msg = `${myName} is leading the 90-day challenge. Don't let up now. 🔥`;
       } else if (rank === 2) {
-        msg = `${myName} is 2nd this week. ${leader} is up there. You gonna let that slide? 😤`;
+        msg = `${myName} is 2nd overall. ${leader} is up there. You gonna let that slide? 😤`;
       } else if (rank === 3) {
-        msg = `${myName}, 3rd place this week. The podium smells bad from down here. 👟`;
+        msg = `${myName}, 3rd overall. The podium smells bad from down here. 👟`;
       } else if (rank > total / 2) {
-        msg = `${myName}, the weekly board called. It wants to know where you are. 🐢`;
+        msg = `${myName}, the 90-day board called. It wants to know where you are. 🐢`;
       } else {
-        msg = `${myName} is mid-pack this week. The top is right there. Almost. 💪`;
+        msg = `${myName} is mid-pack overall. The top is right there. Almost. 💪`;
       }
     }
 
@@ -634,7 +634,7 @@
     const vt = document.getElementById('viewToggle');
     if (cfg.weeklyOnly) {
       vt.style.display = 'none';
-      currentView = 'week';
+      currentView = 'challenge';
     } else {
       vt.style.display = 'flex';
       currentView = 'today';
@@ -642,8 +642,8 @@
     }
 
     if (cfg.weeklyOnly) {
-      document.getElementById('statAvgLbl').textContent = 'Weekly Avg';
-      document.getElementById('statTotalLbl').textContent = 'Total This Wk';
+      document.getElementById('statAvgLbl').textContent = 'Challenge Avg';
+      document.getElementById('statTotalLbl').textContent = 'Challenge Total';
       document.getElementById('statImprovedLbl').textContent = 'Top Performer';
     } else {
       document.getElementById('statAvgLbl').textContent = 'Team Avg';
@@ -659,10 +659,10 @@
       if (tgSnap.exists()) teamGoal = tgSnap.val();
     }
 
-    loadWeekChampion();
+    loadChallengeLeader();
 
     if (reload || true) {
-      if (cfg.weeklyOnly) loadWeekBoard();
+      if (cfg.weeklyOnly) loadChallengeBoard();
       else loadBoard();
     }
   }
@@ -679,16 +679,12 @@
     updatePersonalGoalBar(amount);
     if (amount >= personalGoal) showMilestone('🎉', `${fmt(amount)} ${cfg.label}!`, `${myName} crushed their daily goal!`);
 
-    if (currentChallenge === 'steps') {
-      await set(ref(db, `weekSteps/${weekKey()}/${key}`), amount);
-    }
-
     document.getElementById('stepInput').value = '';
     const sm = document.getElementById('savedMsg');
     sm.textContent = `✓ Logged for ${myName}`;
     setTimeout(() => sm.textContent = '', 2500);
 
-    if (cfg.weeklyOnly) loadWeekBoard();
+    if (cfg.weeklyOnly) loadChallengeBoard();
     else loadBoard();
   };
 
@@ -735,9 +731,6 @@
     if (!amount || amount < 1 || !date) return;
     const key = myName.replace(/\s/g,'_');
     await set(ref(db, `${cfg.dataPath}/${date}/${key}`), amount);
-    if (currentChallenge === 'steps') {
-      await set(ref(db, `weekSteps/${weekKey()}/${key}`), amount);
-    }
     const sm = document.getElementById('pastSavedMsg');
     sm.textContent = `✓ Saved ${fmt(amount)} ${cfg.unit} for ${new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}`;
     setTimeout(() => { sm.textContent = ''; }, 3000);
@@ -760,11 +753,50 @@
     loadBoard();
   };
 
-  // ─── WEEK CHAMPION ───────────────────────────────────────────────────────────
-  async function loadWeekChampion() {
+  // ─── CALC 90-DAY TOTALS ──────────────────────────────────────────────────────
+  // Reads the entire dataPath once, then sums all days from CHALLENGE_START → today.
+  async function calc90DayTotals() {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
-    const { totals } = await calcWeekTotals();
-    const sorted = Object.entries(totals).map(([k,v])=>({name:k.replace(/_/g,' '),steps:v})).sort((a,b)=>b.steps-a.steps);
+    const totals = {};
+    const daily  = {};
+    const days   = [];
+
+    const etStr    = today();
+    const startDate = new Date(CHALLENGE_START + 'T12:00:00');
+    const endDate   = new Date(etStr + 'T12:00:00');
+
+    // Single read of the entire data node
+    const allSnap = await get(ref(db, cfg.dataPath));
+    const allData = allSnap.exists() ? allSnap.val() : {};
+
+    let d = new Date(startDate);
+    while (d <= endDate) {
+      const dateStr = getETDateStr(d);
+      const label   = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'America/New_York' });
+      days.push({ dateStr, label });
+
+      const dayData = allData[dateStr] || {};
+      Object.entries(dayData).forEach(([k, v]) => {
+        totals[k] = (totals[k] || 0) + (parseInt(v) || 0);
+        if (!daily[k]) daily[k] = {};
+        daily[k][dateStr] = parseInt(v) || 0;
+      });
+
+      d.setDate(d.getDate() + 1);
+    }
+
+    return { totals, daily, days };
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // ─── CHALLENGE LEADER BANNER ─────────────────────────────────────────────────
+  async function loadChallengeLeader() {
+    const cfg = CHALLENGE_CONFIG[currentChallenge];
+    const { totals } = await calc90DayTotals();
+    const sorted = Object.entries(totals)
+      .map(([k,v]) => ({ name: k.replace(/_/g,' '), steps: v }))
+      .sort((a,b) => b.steps - a.steps);
+
     if (sorted.length === 0 || sorted[0].steps === 0) {
       document.getElementById('championBanner').style.display = 'none';
       return;
@@ -772,40 +804,11 @@
     const champ = sorted[0];
     document.getElementById('champEmoji').textContent = cfg.champEmoji;
     document.getElementById('champTitle').textContent = cfg.champTitle;
-    document.getElementById('champName').textContent = champ.name;
-    document.getElementById('champSub').textContent = `${fmt(champ.steps)} ${cfg.unit} this week`;
+    document.getElementById('champName').textContent  = champ.name;
+    document.getElementById('champSub').textContent   = `${fmt(champ.steps)} ${cfg.unit} — 90-day total`;
     document.getElementById('championBanner').style.display = 'flex';
   }
-
-  // ─── CALC WEEK TOTALS ────────────────────────────────────────────────────────
-  async function calcWeekTotals() {
-    const cfg = CHALLENGE_CONFIG[currentChallenge];
-    const totals = {};
-    const daily = {};
-    const days = [];
-    const etStr = today();
-    const monday = new Date(etStr + 'T12:00:00');
-    const day = monday.getDay();
-    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const dateStr = getETDateStr(d);
-      if (dateStr > etStr) break;
-      const label = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'America/New_York' });
-      days.push({ dateStr, label });
-      const snap = await get(ref(db, `${cfg.dataPath}/${dateStr}`));
-      if (snap.exists()) {
-        Object.entries(snap.val()).forEach(([k,v]) => {
-          totals[k] = (totals[k] || 0) + (parseInt(v) || 0);
-          if (!daily[k]) daily[k] = {};
-          daily[k][dateStr] = parseInt(v) || 0;
-        });
-      }
-    }
-    return { totals, daily, days };
-  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ─── LOAD BOARD (Today) ───────────────────────────────────────────────────────
   window.loadBoard = async function() {
@@ -829,28 +832,23 @@
       }));
     }
 
-    const loggedPlayers = players.filter(p => p.steps > 0).sort((a,b) => b.steps - a.steps);
+    const loggedPlayers   = players.filter(p => p.steps > 0).sort((a,b) => b.steps - a.steps);
     const unloggedPlayers = players.filter(p => p.steps === 0).sort((a,b) => a.name.localeCompare(b.name));
-    const sortedPlayers = [...loggedPlayers, ...unloggedPlayers];
-
-    if (myName && currentChallenge === 'steps') {
-      const myKey = myName.replace(/\s/g,'_');
-      if (todayData[myKey]) await set(ref(db, `weekSteps/${weekKey()}/${myKey}`), todayData[myKey]);
-    }
+    const sortedPlayers   = [...loggedPlayers, ...unloggedPlayers];
 
     updateSmartBanner(sortedPlayers, false);
 
     const total = loggedPlayers.reduce((s,p) => s + p.steps, 0);
-    const avg = loggedPlayers.length ? Math.round(total / loggedPlayers.length) : 0;
-    document.getElementById('statAvg').textContent = fmt(avg);
-    document.getElementById('statTotal').textContent = fmt(total);
+    const avg   = loggedPlayers.length ? Math.round(total / loggedPlayers.length) : 0;
+    document.getElementById('statAvg').textContent      = fmt(avg);
+    document.getElementById('statTotal').textContent    = fmt(total);
     document.getElementById('statImproved').textContent = loggedPlayers.length > 0 ? loggedPlayers[0].name + '⚡' : '—';
 
     if (teamGoal > 0 && currentChallenge === 'steps') {
       const pct = Math.min(100, Math.round((total/teamGoal)*100));
-      document.getElementById('teamGoalFill').style.width = pct+'%';
+      document.getElementById('teamGoalFill').style.width  = pct+'%';
       document.getElementById('teamTotalSteps').textContent = `${fmt(total)} combined steps`;
-      document.getElementById('teamGoalPct').textContent = `${pct}% of ${fmt(teamGoal)}`;
+      document.getElementById('teamGoalPct').textContent    = `${pct}% of ${fmt(teamGoal)}`;
     }
 
     currentReactKey = today();
@@ -860,36 +858,36 @@
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
   window.refreshBoard = function() {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
-    if (cfg.weeklyOnly || currentView === 'week') loadWeekBoard();
+    if (cfg.weeklyOnly || currentView === 'challenge') loadChallengeBoard();
     else loadBoard();
   };
 
   // ─── RENDER BOARD ────────────────────────────────────────────────────────────
-  function renderBoard(players, isWeekly, loggedCount, daily, last3) {
+  function renderBoard(players, isChallengeTotal, loggedCount, daily, last3) {
     if (loggedCount === undefined) loggedCount = players.filter(p => p.steps > 0).length;
-    const top = players[0]?.steps || 0;
+    const top   = players[0]?.steps || 0;
     const board = document.getElementById('board');
     board.innerHTML = '';
 
     const emptyMsg = currentChallenge === 'pushups'
-      ? 'NO PUSH-UPS LOGGED YET THIS WEEK<br>BE FIRST ON THE BOARD'
-      : (isWeekly ? 'NO STEPS LOGGED YET THIS WEEK<br>BE FIRST ON THE BOARD' : 'NO STEPS LOGGED YET TODAY<br>BE FIRST ON THE BOARD');
+      ? 'NO PUSH-UPS LOGGED YET<br>BE FIRST ON THE BOARD'
+      : (isChallengeTotal ? 'NO STEPS LOGGED YET<br>BE FIRST ON THE BOARD' : 'NO STEPS LOGGED YET TODAY<br>BE FIRST ON THE BOARD');
 
     if (players.length === 0) {
       board.innerHTML = `<div style="text-align:center;padding:40px 0;color:#6B7280;font-size:12px;letter-spacing:0.1em">${emptyMsg}</div>`;
       return;
     }
 
-    const unitLbl = isWeekly ? 'this week' : CHALLENGE_CONFIG[currentChallenge].unit;
+    const unitLbl = isChallengeTotal ? 'total' : CHALLENGE_CONFIG[currentChallenge].unit;
 
     players.forEach((p, i) => {
-      const pct = top > 0 ? Math.round((p.steps / top) * 100) : 0;
-      const isMe = p.name.toLowerCase() === myName.toLowerCase();
+      const pct      = top > 0 ? Math.round((p.steps / top) * 100) : 0;
+      const isMe     = p.name.toLowerCase() === myName.toLowerCase();
       const hasLogged = p.steps > 0;
 
       const fromBottom = hasLogged ? (loggedCount - 1 - i) : -1;
-      const isTrophy = hasLogged && i < 3;
-      const isShamed = hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe && !isTrophy;
+      const isTrophy   = hasLogged && i < 3;
+      const isShamed   = hasLogged && fromBottom >= 0 && fromBottom < 3 && !isMe && !isTrophy;
 
       let rc = 'board-row';
       if (isMe) rc += ' me';
@@ -904,10 +902,10 @@
       const personalRoast = isShamed ? getPersonalRoast(p.name) : '';
 
       let pillsHtml = '';
-      if (isWeekly && last3 && last3.length > 0) {
+      if (isChallengeTotal && last3 && last3.length > 0) {
         const pKey = p.key || p.name.replace(/\s/g,'_');
         const pills = last3.map(({ dateStr, label }) => {
-          const s = (daily && daily[pKey] && daily[pKey][dateStr]) || 0;
+          const s   = (daily && daily[pKey] && daily[pKey][dateStr]) || 0;
           const cls = s > 0 ? 'has-steps' : 'zero-steps';
           return `<span class="day-pill ${cls}">${label} ${s > 0 ? fmt(s) : '0'}</span>`;
         }).join('');
@@ -939,13 +937,13 @@
 
   // ─── REACTIONS ───────────────────────────────────────────────────────────────
   async function loadReacts(name, idx) {
-    const cfg = CHALLENGE_CONFIG[currentChallenge];
-    const key = name.replace(/\s/g,'_');
+    const cfg  = CHALLENGE_CONFIG[currentChallenge];
+    const key  = name.replace(/\s/g,'_');
     const snap = await get(ref(db, `${cfg.reactsPath}/${currentReactKey}/${key}`));
     const data = snap.exists() ? snap.val() : {};
     const zone = document.getElementById(`reacts-${idx}`);
     if (!zone) return;
-    const isMe = name.toLowerCase() === myName.toLowerCase();
+    const isMe  = name.toLowerCase() === myName.toLowerCase();
     const chips = Object.entries(data).filter(([,c])=>c>0).map(([e,c])=>
       `<button class="react-chip" onclick="addReact('${name}',${idx},'${e}')">${e} ${c}</button>`).join('');
     const addBtn = isMe ? '' :
@@ -960,11 +958,11 @@
   };
 
   window.addReact = async function(name, idx, emoji) {
-    const cfg = CHALLENGE_CONFIG[currentChallenge];
-    const key = name.replace(/\s/g,'_');
+    const cfg  = CHALLENGE_CONFIG[currentChallenge];
+    const key  = name.replace(/\s/g,'_');
     const path = `${cfg.reactsPath}/${currentReactKey}/${key}/${emoji}`;
     const snap = await get(ref(db, path));
-    const cur = snap.exists() ? snap.val() : 0;
+    const cur  = snap.exists() ? snap.val() : 0;
     await set(ref(db, path), cur+1);
     const p = document.getElementById(`picker-${idx}`);
     if (p) p.classList.remove('open');
@@ -976,16 +974,17 @@
     const cfg = CHALLENGE_CONFIG[currentChallenge];
     if (cfg.weeklyOnly) return;
     currentView = v;
-    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (v === 'week') loadWeekBoard();
+    if (v === 'challenge') loadChallengeBoard();
     else loadBoard();
   };
 
-  // ─── LOAD WEEK BOARD ─────────────────────────────────────────────────────────
-  async function loadWeekBoard() {
+  // ─── LOAD CHALLENGE BOARD (90-Day Cumulative) ─────────────────────────────────
+  async function loadChallengeBoard() {
     const cfg = CHALLENGE_CONFIG[currentChallenge];
-    const { totals, daily, days } = await calcWeekTotals();
+    const { totals, daily, days } = await calc90DayTotals();
+
     const allSnap = await get(ref(db, cfg.membersPath));
     let players = [];
     if (allSnap.exists()) {
@@ -999,27 +998,36 @@
     }
     players.sort((a,b) => b.steps - a.steps);
 
-    const total = players.reduce((s,p) => s + p.steps, 0);
+    const total      = players.reduce((s,p) => s + p.steps, 0);
     const loggedCount = players.filter(p => p.steps > 0).length;
-    const avg = loggedCount ? Math.round(total / loggedCount) : 0;
-    document.getElementById('statAvg').textContent = fmt(avg);
-    document.getElementById('statTotal').textContent = fmt(total);
+    const avg        = loggedCount ? Math.round(total / loggedCount) : 0;
+
+    document.getElementById('statAvg').textContent      = fmt(avg);
+    document.getElementById('statTotal').textContent    = fmt(total);
     document.getElementById('statImproved').textContent = players.length > 0 && players[0].steps > 0 ? players[0].name + '⚡' : '—';
 
+    if (teamGoal > 0 && currentChallenge === 'steps') {
+      const pct = Math.min(100, Math.round((total/teamGoal)*100));
+      document.getElementById('teamGoalFill').style.width   = pct+'%';
+      document.getElementById('teamTotalSteps').textContent = `${fmt(total)} combined steps`;
+      document.getElementById('teamGoalPct').textContent    = `${pct}% of ${fmt(teamGoal)}`;
+    }
+
     const last3 = days.slice(-3);
-    currentReactKey = weekKey();
+    currentReactKey = weekKey(); // reactions keyed per-week
     updateSmartBanner(players, true);
     renderBoard(players, true, undefined, daily, last3);
   }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ─── MILESTONE ───────────────────────────────────────────────────────────────
   function showMilestone(e, t, s) {
     document.getElementById('mEmoji').textContent = e;
     document.getElementById('mTitle').textContent = t;
-    document.getElementById('mSub').textContent = s;
+    document.getElementById('mSub').textContent   = s;
     const m = document.getElementById('milestone');
     m.classList.add('show');
-    setTimeout(()=>m.classList.remove('show'), 3500);
+    setTimeout(() => m.classList.remove('show'), 3500);
   }
 
   // ─── INIT ─────────────────────────────────────────────────────────────────────
